@@ -2,6 +2,7 @@ package calendar
 
 import (
 	"fmt"
+	"gothstack/plugins/auth"
 	"net/http"
 	"strconv"
 	"time"
@@ -33,8 +34,8 @@ type CalendarFormValues struct {
 
 // HandleCalendarList handles the calendar list page
 func HandleCalendarList(kit *kit.Kit) error {
-	fmt.Println("HandleCalendarList")
-	calendars, err := ListCalendars()
+	userID := kit.Auth().(auth.Auth).UserID
+	calendars, err := ListCalendars(userID)
 	if err != nil {
 		return err
 	}
@@ -54,8 +55,9 @@ func HandleCalendarCreatePost(kit *kit.Kit) error {
 	if !ok {
 		return kit.Render(CalendarForm(values, errors))
 	}
-	fmt.Println(values)
-	calendar, err := CreateCalendar(values.Name, values.Work, values.Hours)
+	auth := kit.Auth().(auth.Auth)
+	userID := auth.UserID
+	calendar, err := CreateCalendar(values.Name, values.Work, values.Hours, userID)
 	if err != nil {
 		return kit.Render(CalendarForm(values, errors))
 	}
@@ -86,7 +88,8 @@ func HandleCalendarView(kit *kit.Kit) error {
 	for _, resource := range resources {
 		total += resource.ResourcesPercentage
 	}
-	calendar, err := GetCalendarWithEntries(uint(id))
+	userID := kit.Auth().(auth.Auth).UserID
+	calendar, err := GetCalendarWithEntries(uint(id), userID)
 	if err != nil {
 		return err
 	}
@@ -96,60 +99,6 @@ func HandleCalendarView(kit *kit.Kit) error {
 	return kit.Render(CalendarView(calendar, resources, total, year, int(month)))
 }
 
-// HandleCalendarViewByMonth renders the calendar view with entries filtered by month and year
-/* func HandleCalendarViewByMonth(kit *kit.Kit) error {
-	// Get the calendar ID from the URL parameter
-	calendarIDStr := chi.URLParam(kit.Request, "id")
-	calendarID, err := strconv.ParseUint(calendarIDStr, 10, 32)
-	if err != nil {
-		return fmt.Errorf("invalid calendar ID: %w", err)
-	}
-
-	// Get the year and month from URL parameters
-	yearStr := kit.Request.URL.Query().Get("year")
-	monthStr := kit.Request.URL.Query().Get("month")
-	fmt.Println(yearStr, monthStr)
-	// Default to current year and month if not provided
-	currentYear := time.Now().Year()
-	currentMonth := int(time.Now().Month())
-
-	// Parse year if provided
-	if yearStr != "" {
-		year, err := strconv.Atoi(yearStr)
-		if err == nil {
-			currentYear = year
-		}
-	}
-
-	// Parse month if provided
-	if monthStr != "" {
-		month, err := strconv.Atoi(monthStr)
-		if err == nil && month >= 1 && month <= 12 {
-			currentMonth = month
-		}
-	}
-
-	// Get the calendar with entries filtered by month and year
-	calendar, err := GetCalendarWithEntriesByMonth(uint(calendarID), currentYear, currentMonth)
-	if err != nil {
-		return err
-	}
-	// calendar.DailyWorkHours = 7.25
-	// Get resources for this calendar
-	resources, err := ListWorkResourcesByCalendar(uint(calendarID))
-	if err != nil {
-		return err
-	}
-
-	// Calculate total resource allocation
-	totalResource := 0
-	for _, resource := range resources {
-		totalResource += resource.ResourcesPercentage
-	}
-
-	// Render the view
-	return kit.Render(CalendarViewMonthly(calendar, resources, totalResource, currentYear, currentMonth))
-} */
 // WorkMonthStats holds statistics about working hours for a month
 type WorkMonthStats struct {
 	WorkingDays    int                         // Number of working days in the month (Mon-Fri, excluding holidays)
@@ -172,6 +121,7 @@ type ResourceMonthStats struct {
 
 // HandleCalendarViewByMonth renders the calendar view with entries filtered by month and year
 func HandleCalendarViewByMonth(kit *kit.Kit) error {
+
 	// Get the calendar ID from the URL parameter
 	calendarIDStr := chi.URLParam(kit.Request, "id")
 	calendarID, err := strconv.ParseUint(calendarIDStr, 10, 32)
@@ -203,12 +153,12 @@ func HandleCalendarViewByMonth(kit *kit.Kit) error {
 		}
 	}
 
+	userID := kit.Auth().(auth.Auth).UserID
 	// Get the calendar with entries filtered by month and year
-	calendar, err := GetCalendarWithEntriesByMonth(uint(calendarID), currentYear, currentMonth)
+	calendar, err := GetCalendarWithEntriesByMonth(uint(calendarID), userID, currentYear, currentMonth)
 	if err != nil {
 		return err
 	}
-
 	// Get resources for this calendar
 	resources, err := ListWorkResourcesByCalendar(uint(calendarID))
 	if err != nil {

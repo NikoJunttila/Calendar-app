@@ -51,7 +51,9 @@ func HandleWorkResourceList(kit *kit.Kit) error {
 	}
 
 	// Retrieve the calendar details
-	calendar, err := GetCalendar(uint(calendarID))
+	auth := kit.Auth().(auth.Auth)
+	userID := auth.UserID
+	calendar, err := GetCalendar(uint(calendarID), userID)
 	if err != nil {
 		return err
 	}
@@ -83,7 +85,9 @@ func HandleWorkResourceCreate(kit *kit.Kit) error {
 	}
 
 	// Retrieve the calendar details
-	calendar, err := GetCalendar(uint(calendarID))
+	auth := kit.Auth().(auth.Auth)
+	userID := auth.UserID
+	calendar, err := GetCalendar(uint(calendarID), userID)
 	if err != nil {
 		return err
 	}
@@ -108,9 +112,10 @@ func HandleWorkResourceCreatePost(kit *kit.Kit) error {
 	// Parse and validate the form values
 	var values WorkResourceFormValues
 	errors, ok := v.Request(kit.Request, &values, workResourceSchema)
-
+	auth := kit.Auth().(auth.Auth)
+	userID := auth.UserID
 	// Retrieve the calendar details for re-rendering the form if needed
-	calendar, err := GetCalendar(uint(calendarID))
+	calendar, err := GetCalendar(uint(calendarID), userID)
 	if err != nil {
 		return err
 	}
@@ -123,15 +128,6 @@ func HandleWorkResourceCreatePost(kit *kit.Kit) error {
 	if !ok {
 		return kit.Render(WorkResourceForm(values, errors, calendar))
 	}
-
-	// Get the current user ID (assuming you have a method to retrieve the authenticated user)
-	auth := kit.Auth().(auth.Auth)
-	userID := auth.UserID
-	if userID == 0 {
-		errors.Add("general", "User not authenticated")
-		return kit.Render(WorkResourceForm(values, errors, calendar))
-	}
-
 	// Create the new work resource
 	resource, err := CreateWorkResource(values.Name, userID, uint(calendarID), values.ResourcesPercentage)
 	if err != nil {
@@ -158,9 +154,10 @@ func HandleWorkResourceEdit(kit *kit.Kit) error {
 	if err != nil {
 		return err
 	}
-
+	auth := kit.Auth().(auth.Auth)
+	userID := auth.UserID
 	// Retrieve the calendar details
-	calendar, err := GetCalendar(resource.CalendarID)
+	calendar, err := GetCalendar(resource.CalendarID, userID)
 	if err != nil {
 		return err
 	}
@@ -193,9 +190,10 @@ func HandleWorkResourceEditPost(kit *kit.Kit) error {
 	if err != nil {
 		return err
 	}
-
+	auth := kit.Auth().(auth.Auth)
+	userID := auth.UserID
 	// Retrieve the calendar details
-	calendar, err := GetCalendar(resource.CalendarID)
+	calendar, err := GetCalendar(resource.CalendarID, userID)
 	if err != nil {
 		return err
 	}

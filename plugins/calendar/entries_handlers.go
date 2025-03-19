@@ -2,6 +2,7 @@ package calendar
 
 import (
 	"fmt"
+	"gothstack/plugins/auth"
 	"log/slog"
 	"strconv"
 	"time"
@@ -43,7 +44,9 @@ func HandleCalendarEntryCreate(kit *kit.Kit) error {
 		return fmt.Errorf("invalid calendar ID: %w", err)
 	}
 	// Retrieve the calendar details.
-	calendar, err := GetCalendar(uint(calendarID))
+	auth := kit.Auth().(auth.Auth)
+	userID := auth.UserID
+	calendar, err := GetCalendar(uint(calendarID), userID)
 	if err != nil {
 		return err
 	}
@@ -78,7 +81,9 @@ func HandleCalendarEntryCreatePost(kit *kit.Kit) error {
 	var values CalendarEntryFormValues
 	errors, ok := v.Request(kit.Request, &values, calendarEntrySchema)
 	// Retrieve the calendar details for re-rendering the form if needed.
-	calendar, err := GetCalendar(uint(calendarID))
+	auth := kit.Auth().(auth.Auth)
+	userID := auth.UserID
+	calendar, err := GetCalendar(uint(calendarID), userID)
 	if err != nil {
 		slog.Error("Failed to calendar", "error", err)
 	}
@@ -96,7 +101,6 @@ func HandleCalendarEntryCreatePost(kit *kit.Kit) error {
 		errors.Add("date", "Invalid date format. Please use YYYY-MM-DD.")
 		return kit.Render(CalendarEntryForm(values, errors, calendar, resources))
 	}
-	fmt.Println(values)
 	// Create the new calendar entry.
 	entry, err := CreateCalendarEntry(uint(calendarID), entryDate, values.Text, values.Hours, values.WorkResourceID)
 	if err != nil {

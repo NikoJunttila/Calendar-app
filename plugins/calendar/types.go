@@ -52,13 +52,14 @@ const (
 )
 
 // CreateCalendar creates a new calendar with the given name and index number
-func CreateCalendar(name string, work bool, avgHours float64) (Calendar, error) {
+func CreateCalendar(name string, work bool, avgHours float64, owner_id uint) (Calendar, error) {
 	//get index number automatically?
 	calendar := Calendar{
 		Name:           name,
 		IndexNumber:    1,
 		Work:           work,
 		DailyWorkHours: avgHours,
+		OwnerID:        owner_id,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
@@ -67,32 +68,58 @@ func CreateCalendar(name string, work bool, avgHours float64) (Calendar, error) 
 }
 
 // GetCalendar retrieves a calendar by its ID
-func GetCalendar(id uint) (Calendar, error) {
+func GetCalendar(id, ownerID uint) (Calendar, error) {
 	var calendar Calendar
-	result := db.Get().First(&calendar, id)
+	result := db.Get().Where("id = ? AND owner_id = ?", id, ownerID).First(&calendar)
 	return calendar, result.Error
 }
 
-// ListCalendars returns all calendars ordered by index_number
-func ListCalendars() ([]Calendar, error) {
+func ListCalendars(ownerID uint) ([]Calendar, error) {
 	var calendars []Calendar
-	result := db.Get().Order("index_number asc").Find(&calendars)
+	result := db.Get().Where("owner_id = ?", ownerID).Order("index_number asc").Find(&calendars)
 	return calendars, result.Error
 }
 
-func GetCalendarWithEntries(id uint) (Calendar, error) {
+func GetCalendarWithEntries(id uint, ownerID uint) (Calendar, error) {
 	var calendar Calendar
-	result := db.Get().Preload("Entries.WorkResource").First(&calendar, id)
-	return calendar, result.Error
+
+	// Step 1: Fetch the calendar with owner check
+	// This ensures only the legitimate owner can access their calendar
+	// We use First() instead of Find() because we're looking for a single record by primary key
+	// The Where clause adds security by checking both the ID and ownerID match
+	if err := db.Get().Where("id = ? AND owner_id = ?", id, ownerID).First(&calendar).Error; err != nil {
+		// If no calendar is found or another error occurs, return early with the empty calendar and error
+		return calendar, err
+	}
+
+	// Step 2: Fetch the entries for this calendar in a separate query
+	// We do this in two steps rather than one complex query with preloading because:
+	// - It gives us more control over how entries are loaded (sorting, filtering)
+	// - It's clearer what's happening in each step
+	// - It allows us to return immediately if the calendar doesn't exist or belong to the user
+	if err := db.Get().
+		// Only get entries for this specific calendar
+		Where("calendar_id = ?", id).
+		// Sort the entries by date in ascending order (oldest to newest)
+		// This makes the data more useful for display and processing
+		Order("date asc").
+		// Eager load the WorkResource relationship for each entry
+		// This prevents the N+1 query problem by loading all related resources in one go
+		Preload("WorkResource").
+		// Populate the Entries slice of our calendar struct
+		Find(&calendar.Entries).Error; err != nil {
+		// If an error occurs while fetching entries, return what we have so far with the error
+		return calendar, err
+	}
+
+	// Return the calendar with its entries (sorted by date) and no error
+	return calendar, nil
 }
 
-// GetCalendarWithEntriesByMonth retrieves a calendar by ID along with its entries for a specific month and year
-// while also preloading the WorkResource for each entry
-func GetCalendarWithEntriesByMonth(calendarID uint, year, month int) (Calendar, error) {
+func GetCalendarWithEntriesByMonth(calendarID uint, ownerID uint, year, month int) (Calendar, error) {
 	var calendar Calendar
-
-	// First, fetch the calendar
-	if err := db.Get().First(&calendar, calendarID).Error; err != nil {
+	// First, fetch the calendar with owner check
+	if err := db.Get().Where("id = ? AND owner_id = ?", calendarID, ownerID).First(&calendar).Error; err != nil {
 		return calendar, err
 	}
 

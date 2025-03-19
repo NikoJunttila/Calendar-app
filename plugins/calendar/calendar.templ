@@ -29,16 +29,14 @@ templ CalendarList(data CalendarPageData) {
 									<tr class="border-b">
 										<th class="text-left py-2 px-4">ID</th>
 										<th class="text-left py-2 px-4">Name</th>
-										<th class="text-left py-2 px-4">Index</th>
 										<th class="text-left py-2 px-4">Actions</th>
 									</tr>
 								</thead>
 								<tbody>
 									for _, calendar := range data.Calendars {
-										<tr class="border-b hover:bg-gray-50">
+										<tr class="border-b">
 											<td class="py-2 px-4">{ strconv.FormatUint(uint64(calendar.ID), 10) }</td>
 											<td class="py-2 px-4">{ calendar.Name }</td>
-											<td class="py-2 px-4">{ strconv.Itoa(calendar.IndexNumber) }</td>
 											<td class="py-2 px-4">
 												<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10)) } class="text-blue-600 hover:underline">View</a>
 											</td>
@@ -102,6 +100,7 @@ templ CalendarForm(values CalendarFormValues, errors v.Errors) {
 				<p class="text-center text-green-700">{ values.SuccessMessage }</p>
 			</div>
 		}
+			<a href="/calendars" class="text-blue-600 hover:underline">← Back to Calendars</a>
 	</form>
 }
 
@@ -164,8 +163,6 @@ templ CalendarView(calendar Calendar, resources []WorkResource, totalResource in
 								<thead>
 									<tr class="border-b">
 										<th class="text-left py-2 px-4">Date</th>
-										<th class="text-left py-2 px-4">Year</th>
-										<th class="text-left py-2 px-4">Month</th>
 										<th class="text-left py-2 px-4">Week</th>
 										<th class="text-right py-2 px-4">Hours</th>
 										<th class="text-right py-2 px-4">Text</th>
@@ -174,10 +171,8 @@ templ CalendarView(calendar Calendar, resources []WorkResource, totalResource in
 								</thead>
 								<tbody>
 									for _, entry := range calendar.Entries {
-										<tr class="border-b hover:bg-gray-50">
-											<td class="py-2 px-4">{ entry.Date.Format("2006-01-02") }</td>
-											<td class="py-2 px-4">{ strconv.Itoa(entry.Year) }</td>
-											<td class="py-2 px-4">{ strconv.Itoa(entry.Month) }</td>
+										<tr class="border-b">
+											<td class="py-2 px-4">{ entry.Date.Format("02.01.2006") }</td>
 											<td class="py-2 px-4">{ strconv.Itoa(entry.Week) }</td>
 											<td class="py-2 px-4 text-right">{ fmt.Sprintf("%.2f", entry.Hours) }</td>
 											<td class="py-2 px-4 text-right">{ entry.Text }</td>
@@ -193,93 +188,7 @@ templ CalendarView(calendar Calendar, resources []WorkResource, totalResource in
 		</div>
 	}
 }
-/* templ CalendarViewMonthly(calendar Calendar, resources []WorkResource, totalResource int, currentYear int, currentMonth int) {
-	@layouts.BaseLayout() {
-		@components.Navigation()
-		<div class="w-full justify-center gap-10">
-			<div class="mt-10 lg:mt-20">
-				<div class="max-w-4xl mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
-					<h2 class="text-center text-2xl font-medium">Calendar: { calendar.Name }</h2>
-					
-					<div class="flex justify-center">
-						<form hx-boost="true" method="get" class="flex gap-4 items-center">
-							<label for="month-filter">Filter by month:</label>
-							<select id="month-filter" name="month" onchange="this.form.submit()" class="border rounded px-2 py-1 bg-gray-500">
-								for m := 1; m <= 12; m++ {
-									<option value={ strconv.Itoa(m) } selected?={ m == currentMonth }>
-										{ time.Month(m).String() }
-									</option>
-								}
-							</select>
-							<select id="year-filter" name="year" onchange="this.form.submit()" class="border rounded px-2 py-1 bg-gray-500">
-								for y := time.Now().Year() - 2; y <= time.Now().Year() + 2; y++ {
-									<option value={ strconv.Itoa(y) } selected?={ y == currentYear }>
-										{ strconv.Itoa(y) }
-									</option>
-								}
-							</select>
-							<button type="submit" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Apply</button>
-						</form>
-					</div>
-					
-					<div class="flex justify-between">
-						<a href="/calendars" class="text-blue-600 hover:underline">← Back to Calendars</a>
-						<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources/create") } { components.ButtonAttrs()... }>Add resource</a>
-						<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entries/create") } { components.ButtonAttrs()... }>Add Entry</a>
-					</div>
-					<div class="mt-6">
-						if len(resources) == 0 {
-							<p class="text-center text-gray-500">No resources found for this calendar.</p>
-						} else {
-							<table class="w-full border-collapse">
-							<thead><tr><th>Resources for this calendar total: {fmt.Sprintf("%d%%", totalResource)}
-						<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources") }class="text-blue-600 hover:underline ml-2">Resource list</a>
-							</th></tr></thead>
-								<tbody>
-									for _, r := range resources {
-											<td class="py-2 px-4">{fmt.Sprintf("%s %d%%",r.Name, r.ResourcesPercentage)}</td>
-									}
-								</tbody>
-							</table>
-						}
-					</div>
-					<div class="mt-6">
-						if len(calendar.Entries) == 0 {
-							<p class="text-center text-gray-500">No entries found for this calendar for { time.Month(currentMonth).String() } { strconv.Itoa(currentYear) }.</p>
-						} else {
-							<table class="w-full border-collapse">
-								<thead>
-									<tr class="border-b">
-										<th class="text-left py-2 px-4">Date</th>
-										<th class="text-left py-2 px-4">Year</th>
-										<th class="text-left py-2 px-4">Month</th>
-										<th class="text-left py-2 px-4">Week</th>
-										<th class="text-right py-2 px-4">Hours</th>
-										<th class="text-right py-2 px-4">Text</th>
-										<th class="text-right py-2 px-4">Resource</th>
-									</tr>
-								</thead>
-								<tbody>
-									for _, entry := range calendar.Entries {
-										<tr class="border-b hover:bg-gray-50">
-											<td class="py-2 px-4">{ entry.Date.Format("2006-01-02") }</td>
-											<td class="py-2 px-4">{ strconv.Itoa(entry.Year) }</td>
-											<td class="py-2 px-4">{ strconv.Itoa(entry.Month) }</td>
-											<td class="py-2 px-4">{ strconv.Itoa(entry.Week) }</td>
-											<td class="py-2 px-4 text-right">{ fmt.Sprintf("%.2f", entry.Hours) }</td>
-											<td class="py-2 px-4 text-right">{ entry.Text }</td>
-											<td class="py-2 px-4 text-right">{ entry.WorkResource.Name }</td>
-										</tr>
-									}
-								</tbody>
-							</table>
-						}
-					</div>
-				</div>
-			</div>
-		</div>
-	}
-} */
+
 templ CalendarViewMonthly(calendar Calendar, resources []WorkResource, totalResource int, currentYear int, currentMonth int, workStats WorkMonthStats) {
 	@layouts.BaseLayout() {
 		@components.Navigation()
@@ -367,7 +276,7 @@ templ CalendarViewMonthly(calendar Calendar, resources []WorkResource, totalReso
 									</thead>
 									<tbody>
 										for _, r := range resources {
-											<tr class="border-b hover:bg-gray-50">
+											<tr class="border-b">
 												<td class="py-2 px-4">{ r.Name }</td>
 												<td class="py-2 px-4 text-right">{ fmt.Sprintf("%d%%", r.ResourcesPercentage) }</td>
 												<td class="py-2 px-4 text-right">
@@ -408,16 +317,29 @@ templ CalendarViewMonthly(calendar Calendar, resources []WorkResource, totalReso
 										<th class="text-right py-2 px-4">Hours</th>
 										<th class="text-right py-2 px-4">Text</th>
 										<th class="text-right py-2 px-4">Resource</th>
+										<th class="text-right py-2 px-4">Actions</th>
 									</tr>
 								</thead>
 								<tbody>
 									for _, entry := range calendar.Entries {
-										<tr class="border-b hover:bg-gray-50">
-											<td class="py-2 px-4">{ entry.Date.Format("2006-01-02") }</td>
+										<tr class="border-b">
+											<td class="py-2 px-4">{ entry.Date.Format("02.01.2006") }</td>
 											<td class="py-2 px-4">{ strconv.Itoa(entry.Week) }</td>
 											<td class="py-2 px-4 text-right">{ fmt.Sprintf("%.2f", entry.Hours) }</td>
 											<td class="py-2 px-4 text-right">{ entry.Text }</td>
 											<td class="py-2 px-4 text-right">{ entry.WorkResource.Name }</td>
+										<td class="px-6 py-4 whitespace-nowrap">
+											<div class="flex space-x-2">
+												<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entry/" + strconv.FormatUint(uint64(entry.ID), 10) + "/edit") } class="text-blue-600 hover:text-blue-800">
+													Edit
+												</a>
+												<button hx-delete={ string(templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entry/" + strconv.FormatUint(uint64(entry.ID), 10))) } 
+														hx-confirm="Are you sure you want to delete this resource?" 
+														class="text-red-600 hover:text-red-800">
+													Delete
+												</button>
+											</div>
+										</td>
 										</tr>
 									}
 								</tbody>

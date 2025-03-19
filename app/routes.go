@@ -39,7 +39,7 @@ func InitializeRoutes(router *chi.Mux) {
 	// Routes that "might" have an authenticated user
 	router.Group(func(app chi.Router) {
 		app.Use(kit.WithAuthentication(authConfig, false)) // strict set to false
-
+		app.Get("/unauthorized", kit.Handler(handlers.HandleUnauthorized))
 		// Routes
 		app.Get("/", kit.Handler(handlers.HandleLandingIndex))
 	})
