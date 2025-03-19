@@ -1,0 +1,72 @@
+package calendar
+
+import (
+    "fmt"
+	"strconv"
+	v "github.com/anthdm/superkit/validate"
+	"gothstack/app/views/components"
+	"gothstack/app/views/layouts"
+)
+
+templ CalendarEntryCreate(data CalendarEntryPageData) {
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<div class="container mx-auto mt-10">
+			<h2 class="text-center text-2xl font-medium">
+				Create Entry for Calendar: { data.Calendar.Name }
+			</h2>
+
+			<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(data.Calendar.ID), 10)) }class="text-blue-600 hover:underline">← Back to Calendars</a>
+			@CalendarEntryForm(data.FormValues, data.FormErrors, data.Calendar, data.WorkResources)
+		</div>
+	}
+}
+
+// CalendarEntryForm renders the form for creating a calendar entry.
+templ CalendarEntryForm(values CalendarEntryFormValues, errors v.Errors, calendar Calendar, resources []WorkResource) {
+    <form hx-post={ string(templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entries/create")) } class="flex flex-col gap-4">
+		<div class="flex flex-col">
+			<label for="date">Date</label>
+			<input { components.InputAttrs(errors.Has("date"))... } type="date" name="date" id="date" value={ values.Date } />
+			if errors.Has("date") {
+				<div class="text-red-500 text-xs">{ errors.Get("date")[0] }</div>
+			}
+		</div>
+		<div class="flex flex-col">
+			<label for="hours">Hours</label>
+			<input { components.InputAttrs(errors.Has("hours"))... } type="number" name="hours" id="hours" step="0.001" value={ fmt.Sprintf("%.2f", values.Hours) } />
+			if errors.Has("hours") {
+				<div class="text-red-500 text-xs">{ errors.Get("hours")[0] }</div>
+			}
+		</div>
+       	<div class="flex flex-col">
+			<label for="text">Text</label>
+			<input { components.InputAttrs(errors.Has("text"))... } type="text" name="text" id="text" value={ values.Text } />
+			if errors.Has("text") {
+				<div class="text-red-500 text-xs">{ errors.Get("text")[0] }</div>
+			}
+		</div>
+       	<div class="flex flex-col">
+			<label for="resource">Resource</label>
+			<select { components.InputAttrs(errors.Has("resource"))... } name="resource" id="resource">
+				<option value="">Select a resource</option>
+				for _, resource := range resources {
+					<option value={ strconv.FormatUint(uint64(resource.ID), 10) } >
+						{ resource.Name }
+					</option>
+				}
+			</select>
+			if errors.Has("resource") {
+				<div class="text-red-500 text-xs">{ errors.Get("resource")[0] }</div>
+			}
+		</div>
+		<button { components.ButtonAttrs()... }>
+			Create Entry
+		</button>
+		if values.SuccessMessage != "" {
+			<div class="mt-4 p-4 bg-green-100 border border-green-300 rounded-md">
+				<p class="text-center text-green-700">{ values.SuccessMessage }</p>
+			</div>
+		}
+	</form>
+}

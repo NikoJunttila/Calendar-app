@@ -1,0 +1,65 @@
+package auth
+
+import (
+	v "github.com/anthdm/superkit/validate"
+
+	"gothstack/app/views/layouts"
+	"gothstack/app/views/components"
+)
+
+type LoginIndexPageData struct {
+	FormValues LoginFormValues
+	FormErrors v.Errors
+}
+
+type LoginFormValues struct {
+	Email    string `form:"email"`
+	Password string `form:"password"`
+}
+
+templ LoginIndex(data LoginIndexPageData) {
+	@layouts.BaseLayout() {
+	@components.Navigation()
+		<div class="w-full justify-center gap-10">
+			<div class="mt-10 lg:mt-40">
+				<div class="max-w-sm mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
+					<h2 class="text-center text-2xl font-medium">Login to SuperKit</h2>
+					@LoginForm(data.FormValues, data.FormErrors)
+					<a class="text-sm underline" href="/signup">Don't have an account? Signup here.</a>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+templ LoginForm(values LoginFormValues, errors v.Errors) {
+	<form hx-post="/login" class="flex flex-col gap-4">
+		<div class="flex flex-col gap-1">
+			<label for="email">Email *</label>
+			<input { components.InputAttrs(errors.Has("email"))... } name="email" id="email" value={ values.Email }/>
+			if errors.Has("email") {
+				<div class="text-red-500 text-xs">{ errors.Get("email")[0] }</div>
+			}
+		</div>
+		<div class="flex flex-col gap-1">
+			<label for="password">Password *</label>
+			<input { components.InputAttrs(errors.Has("password"))... } type="password" name="password" id="password"/>
+			if errors.Has("password") {
+				<ul class="list-disc ml-4">
+					for _, err := range errors.Get("password") {
+						<li class="text-red-500 text-xs">password { err }</li>
+					}
+				</ul>
+			}
+			if errors.Has("credentials") {
+				<div class="text-red-500 text-xs">{ errors.Get("credentials")[0] }</div>
+			}
+			if errors.Has("verified") {
+				<div class="text-red-500 text-xs">{ errors.Get("verified")[0] }</div>
+			}
+		</div>
+		<button { components.ButtonAttrs()... }>
+			Login
+		</button>
+	</form>
+}

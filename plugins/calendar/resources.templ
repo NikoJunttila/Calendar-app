@@ -1,0 +1,186 @@
+package calendar
+
+import (
+	"fmt"
+	"strconv"
+	v "github.com/anthdm/superkit/validate"
+	"gothstack/app/views/components"
+	"gothstack/app/views/layouts"
+)
+
+// WorkResourceList renders the list of work resources for a calendar
+templ WorkResourceList(data WorkResourcePageData, totalHours int) {
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<div class="container mx-auto mt-10">
+			<h2 class="text-center text-2xl font-medium">
+				Work Resources for Calendar: { data.Calendar.Name }
+			</h2>
+			
+			<div class="mt-8">
+				<div class="flex justify-end mb-4">
+					<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(data.Calendar.ID), 10) + "/resources/create") } class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+						Add New Resource
+					</a>
+				</div>
+				
+				if len(data.WorkResources) == 0 {
+					<div class="text-center py-8 bg-gray-50 rounded">
+						<p class="text-gray-500">No work resources found for this calendar.</p>
+					</div>
+				} else {
+					<div class="overflow-x-auto">
+						<table class="min-w-full border border-gray-200">
+							<thead>
+								<tr class="bg-gray-100">
+									<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+									<th class="flex flex-col px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resources % <small>{ fmt.Sprintf("total: %d%%", totalHours) }</small></th>
+									<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
+									<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+								</tr>
+							</thead>
+							<tbody class="divide-y divide-gray-200">
+								for _, resource := range data.WorkResources {
+									<tr>
+										<td class="px-6 py-4 whitespace-nowrap">{ resource.Name }</td>
+										<td class="px-6 py-4 whitespace-nowrap">{ fmt.Sprintf("%d%%", resource.ResourcesPercentage) }</td>
+										<td class="px-6 py-4 whitespace-nowrap">{ resource.CreatedAt.Format("2006-01-02") }</td>
+										<td class="px-6 py-4 whitespace-nowrap">
+											<div class="flex space-x-2">
+												<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(data.Calendar.ID), 10) + "/resources/" + strconv.FormatUint(uint64(resource.ID), 10) + "/edit") } class="text-blue-600 hover:text-blue-800">
+													Edit
+												</a>
+												<button hx-delete={ string(templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(data.Calendar.ID), 10) + "/resources/" + strconv.FormatUint(uint64(resource.ID), 10))) } 
+														hx-confirm="Are you sure you want to delete this resource?" 
+														class="text-red-600 hover:text-red-800">
+													Delete
+												</button>
+											</div>
+										</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
+				
+				<div class="mt-6 text-center">
+					<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(data.Calendar.ID), 10)) } class="text-blue-600 hover:text-blue-800">
+						Back to Calendar
+					</a>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// WorkResourceCreate renders the work resource creation page
+templ WorkResourceCreate(data WorkResourcePageData) {
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<div class="container mx-auto mt-10">
+		<div class="flex flex-col align-center items-center py-4">
+			<h2 class="text-center text-2xl font-medium">
+				Create Work Resource for Calendar: { data.Calendar.Name }
+			</h2>
+			<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(data.Calendar.ID), 10)) }class="text-blue-600 hover:underline">← Back to Calendars</a>
+		</div>
+			@WorkResourceForm(data.FormValues, data.FormErrors, data.Calendar)
+		</div>
+	}
+}
+
+// WorkResourceEdit renders the work resource edit page
+templ WorkResourceEdit(data WorkResourcePageData, resourceID uint) {
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<div class="container mx-auto mt-10">
+			<h2 class="text-center text-2xl font-medium">
+				Edit Work Resource for Calendar: { data.Calendar.Name }
+			</h2>
+			@WorkResourceEditForm(data.FormValues, data.FormErrors, data.Calendar, resourceID)
+		</div>
+	}
+}
+
+// WorkResourceForm renders the form for creating a work resource
+templ WorkResourceForm(values WorkResourceFormValues, errors v.Errors, calendar Calendar) {
+	<form hx-post={ string(templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources/create")) } class="flex flex-col gap-4 max-w-md mx-auto mt-6">
+		<div class="flex flex-col">
+			<label for="name">Name</label>
+			<input { components.InputAttrs(errors.Has("name"))... } type="text" name="name" id="name" value={ values.Name } />
+			if errors.Has("name") {
+				<div class="text-red-500 text-xs">{ errors.Get("name")[0] }</div>
+			}
+		</div>
+		
+		<div class="flex flex-col">
+			<label for="resources_percentage">Resources Percentage</label>
+			<input { components.InputAttrs(errors.Has("resources_percentage"))... } type="number" name="resources_percentage" id="resources_percentage" min="0" max="100" value={ fmt.Sprintf("%d", values.ResourcesPercentage) } />
+			if errors.Has("resources_percentage") {
+				<div class="text-red-500 text-xs">{ errors.Get("resources_percentage")[0] }</div>
+			}
+		</div>
+		
+		if errors.Has("general") {
+			<div class="text-red-500 text-sm">{ errors.Get("general")[0] }</div>
+		}
+		
+		<button { components.ButtonAttrs()... }>
+			Create Resource
+		</button>
+		
+		if values.SuccessMessage != "" {
+			<div class="mt-4 p-4 bg-green-100 border border-green-300 rounded-md">
+				<p class="text-center text-green-700">{ values.SuccessMessage }</p>
+			</div>
+		}
+		
+		<div class="mt-4 text-center">
+			<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources") } class="text-blue-600 hover:text-blue-800">
+				Back to Resources List
+			</a>
+		</div>
+	</form>
+}
+
+// WorkResourceEditForm renders the form for editing a work resource
+templ WorkResourceEditForm(values WorkResourceFormValues, errors v.Errors, calendar Calendar, resourceID uint) {
+	<form hx-post={ string(templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources/" + strconv.FormatUint(uint64(resourceID), 10) + "/edit")) } class="flex flex-col gap-4 max-w-md mx-auto mt-6">
+		<div class="flex flex-col">
+			<label for="name">Name</label>
+			<input { components.InputAttrs(errors.Has("name"))... } type="text" name="name" id="name" value={ values.Name } />
+			if errors.Has("name") {
+				<div class="text-red-500 text-xs">{ errors.Get("name")[0] }</div>
+			}
+		</div>
+		
+		<div class="flex flex-col">
+			<label for="resources_percentage">Resources Percentage</label>
+			<input { components.InputAttrs(errors.Has("resources_percentage"))... } type="number" name="resources_percentage" id="resources_percentage" min="0" max="100" value={ fmt.Sprintf("%d", values.ResourcesPercentage) } />
+			if errors.Has("resources_percentage") {
+				<div class="text-red-500 text-xs">{ errors.Get("resources_percentage")[0] }</div>
+			}
+		</div>
+		
+		if errors.Has("general") {
+			<div class="text-red-500 text-sm">{ errors.Get("general")[0] }</div>
+		}
+		
+		<button { components.ButtonAttrs()... }>
+			Update Resource
+		</button>
+		
+		if values.SuccessMessage != "" {
+			<div class="mt-4 p-4 bg-green-100 border border-green-300 rounded-md">
+				<p class="text-center text-green-700">{ values.SuccessMessage }</p>
+			</div>
+		}
+		
+		<div class="mt-4 text-center">
+			<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources") } class="text-blue-600 hover:text-blue-800">
+				Back to Resources List
+			</a>
+		</div>
+	</form>
+}

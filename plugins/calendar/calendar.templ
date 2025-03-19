@@ -1,0 +1,431 @@
+package calendar
+
+import (
+    "fmt"
+	"time"
+	"strconv"
+	v "github.com/anthdm/superkit/validate"
+	"gothstack/app/views/components"
+	"gothstack/app/views/layouts"
+)
+
+// CalendarList renders the list of calendars
+templ CalendarList(data CalendarPageData) {
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<div class="w-full justify-center gap-10">
+			<div class="mt-10 lg:mt-20">
+				<div class="max-w-4xl mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
+					<h2 class="text-center text-2xl font-medium">Calendars</h2>
+					<div class="flex justify-end">
+						<a href="/calendars/create" { components.ButtonAttrs()... }>Create New Calendar</a>
+					</div>
+					<div class="mt-6">
+						if len(data.Calendars) == 0 {
+							<p class="text-center text-gray-500">No calendars found.</p>
+						} else {
+							<table class="w-full border-collapse">
+								<thead>
+									<tr class="border-b">
+										<th class="text-left py-2 px-4">ID</th>
+										<th class="text-left py-2 px-4">Name</th>
+										<th class="text-left py-2 px-4">Index</th>
+										<th class="text-left py-2 px-4">Actions</th>
+									</tr>
+								</thead>
+								<tbody>
+									for _, calendar := range data.Calendars {
+										<tr class="border-b hover:bg-gray-50">
+											<td class="py-2 px-4">{ strconv.FormatUint(uint64(calendar.ID), 10) }</td>
+											<td class="py-2 px-4">{ calendar.Name }</td>
+											<td class="py-2 px-4">{ strconv.Itoa(calendar.IndexNumber) }</td>
+											<td class="py-2 px-4">
+												<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10)) } class="text-blue-600 hover:underline">View</a>
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// CalendarCreate renders the calendar creation form
+templ CalendarCreate(data CalendarPageData) {
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<div class="w-full justify-center gap-10">
+			<div class="mt-10 lg:mt-20">
+				<div class="max-w-md mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
+					<h2 class="text-center text-2xl font-medium">Create Calendar</h2>
+					<p class="text-center">Create a new calendar to organize your entries.</p>
+					@CalendarForm(data.FormValues, data.FormErrors)
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// CalendarForm renders the form for creating a calendar
+templ CalendarForm(values CalendarFormValues, errors v.Errors) {
+	<form hx-post="/calendars/create" class="flex flex-col gap-4">
+		<div class="flex flex-col gap-1">
+			<label for="name">Calendar Name</label>
+			<input { components.InputAttrs(errors.Has("name"))... } type="text" name="name" id="name" value={ values.Name }/>
+			if errors.Has("name") {
+				<div class="text-red-500 text-xs">{ errors.Get("name")[0] }</div>
+			}
+		</div>
+		<div class="flex flex-col gap-1">
+			<label for="hours">Avg Hours for a day</label>
+			<input { components.InputAttrs(errors.Has("hours"))... } type="number" name="hours" id="hours" step="0.001" value={ fmt.Sprintf("%.2f", values.Hours) } />
+			if errors.Has("hours") {
+				<div class="text-red-500 text-xs">{ errors.Get("hours")[0] }</div>
+			}
+		</div>
+		<div class="flex flex-col gap-1">
+			<label for="work">Work calendar?</label>
+			<input { components.InputAttrs(errors.Has("work"))... } type="checkbox" name="work" id="work" />
+			if errors.Has("work") {
+				<div class="text-red-500 text-xs">{ errors.Get("name")[0] }</div>
+			}
+		</div>
+		<button { components.ButtonAttrs()... }>
+			Create Calendar
+		</button>
+		if values.SuccessMessage != "" {
+			<div class="mt-4 p-4 bg-green-100 border border-green-300 rounded-md">
+				<p class="text-center text-green-700">{ values.SuccessMessage }</p>
+			</div>
+		}
+	</form>
+}
+
+// CalendarView renders the view of a specific calendar with its entries
+templ CalendarView(calendar Calendar, resources []WorkResource, totalResource int, currentYear int, currentMonth int) {
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<div class="w-full justify-center gap-10">
+			<div class="mt-10 lg:mt-20">
+				<div class="max-w-4xl mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
+					<h2 class="text-center text-2xl font-medium">Calendar: { calendar.Name }</h2>
+					
+					<div class="flex justify-center">
+						<form hx-boost="true" method="get" class="flex gap-4 items-center">
+							<label for="month-filter">Filter by month:</label>
+							<select id="month-filter" name="month" onchange="this.form.submit()" class="border rounded px-2 py-1 bg-gray-500">
+								for m := 1; m <= 12; m++ {
+									<option value={ strconv.Itoa(m) } selected?={ m == currentMonth }>
+										{ time.Month(m).String() }
+									</option>
+								}
+							</select>
+							<select id="year-filter" name="year" onchange="this.form.submit()" class="border rounded px-2 py-1 bg-gray-500">
+								for y := time.Now().Year() - 2; y <= time.Now().Year() + 2; y++ {
+									<option value={ strconv.Itoa(y) } selected?={ y == currentYear }>
+										{ strconv.Itoa(y) }
+									</option>
+								}
+							</select>
+							<button type="submit" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Apply</button>
+						</form>
+					</div>
+					
+					<div class="flex justify-between">
+						<a href="/calendars" class="text-blue-600 hover:underline">← Back to Calendars</a>
+						<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources/create") } { components.ButtonAttrs()... }>Add resource</a>
+						<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entries/create") } { components.ButtonAttrs()... }>Add Entry</a>
+					</div>
+					<div class="mt-6">
+						if len(resources) == 0 {
+							<p class="text-center text-gray-500">No resources found for this calendar.</p>
+						} else {
+							<table class="w-full border-collapse">
+							<thead><tr><th>Resources for this calendar total: {fmt.Sprintf("%d%%", totalResource)}
+						<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources") }class="text-blue-600 hover:underline ml-2">Resource list</a>
+							</th></tr></thead>
+								<tbody>
+									for _, r := range resources {
+											<td class="py-2 px-4">{fmt.Sprintf("%s %d%%",r.Name, r.ResourcesPercentage)}</td>
+									}
+								</tbody>
+							</table>
+						}
+					</div>
+					<div class="mt-6">
+						if len(calendar.Entries) == 0 {
+							<p class="text-center text-gray-500">No entries found for this calendar for { time.Month(currentMonth).String() } { strconv.Itoa(currentYear) }.</p>
+						} else {
+							<table class="w-full border-collapse">
+								<thead>
+									<tr class="border-b">
+										<th class="text-left py-2 px-4">Date</th>
+										<th class="text-left py-2 px-4">Year</th>
+										<th class="text-left py-2 px-4">Month</th>
+										<th class="text-left py-2 px-4">Week</th>
+										<th class="text-right py-2 px-4">Hours</th>
+										<th class="text-right py-2 px-4">Text</th>
+										<th class="text-right py-2 px-4">Resource</th>
+									</tr>
+								</thead>
+								<tbody>
+									for _, entry := range calendar.Entries {
+										<tr class="border-b hover:bg-gray-50">
+											<td class="py-2 px-4">{ entry.Date.Format("2006-01-02") }</td>
+											<td class="py-2 px-4">{ strconv.Itoa(entry.Year) }</td>
+											<td class="py-2 px-4">{ strconv.Itoa(entry.Month) }</td>
+											<td class="py-2 px-4">{ strconv.Itoa(entry.Week) }</td>
+											<td class="py-2 px-4 text-right">{ fmt.Sprintf("%.2f", entry.Hours) }</td>
+											<td class="py-2 px-4 text-right">{ entry.Text }</td>
+											<td class="py-2 px-4 text-right">{ entry.WorkResource.Name }</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}
+/* templ CalendarViewMonthly(calendar Calendar, resources []WorkResource, totalResource int, currentYear int, currentMonth int) {
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<div class="w-full justify-center gap-10">
+			<div class="mt-10 lg:mt-20">
+				<div class="max-w-4xl mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
+					<h2 class="text-center text-2xl font-medium">Calendar: { calendar.Name }</h2>
+					
+					<div class="flex justify-center">
+						<form hx-boost="true" method="get" class="flex gap-4 items-center">
+							<label for="month-filter">Filter by month:</label>
+							<select id="month-filter" name="month" onchange="this.form.submit()" class="border rounded px-2 py-1 bg-gray-500">
+								for m := 1; m <= 12; m++ {
+									<option value={ strconv.Itoa(m) } selected?={ m == currentMonth }>
+										{ time.Month(m).String() }
+									</option>
+								}
+							</select>
+							<select id="year-filter" name="year" onchange="this.form.submit()" class="border rounded px-2 py-1 bg-gray-500">
+								for y := time.Now().Year() - 2; y <= time.Now().Year() + 2; y++ {
+									<option value={ strconv.Itoa(y) } selected?={ y == currentYear }>
+										{ strconv.Itoa(y) }
+									</option>
+								}
+							</select>
+							<button type="submit" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Apply</button>
+						</form>
+					</div>
+					
+					<div class="flex justify-between">
+						<a href="/calendars" class="text-blue-600 hover:underline">← Back to Calendars</a>
+						<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources/create") } { components.ButtonAttrs()... }>Add resource</a>
+						<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entries/create") } { components.ButtonAttrs()... }>Add Entry</a>
+					</div>
+					<div class="mt-6">
+						if len(resources) == 0 {
+							<p class="text-center text-gray-500">No resources found for this calendar.</p>
+						} else {
+							<table class="w-full border-collapse">
+							<thead><tr><th>Resources for this calendar total: {fmt.Sprintf("%d%%", totalResource)}
+						<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources") }class="text-blue-600 hover:underline ml-2">Resource list</a>
+							</th></tr></thead>
+								<tbody>
+									for _, r := range resources {
+											<td class="py-2 px-4">{fmt.Sprintf("%s %d%%",r.Name, r.ResourcesPercentage)}</td>
+									}
+								</tbody>
+							</table>
+						}
+					</div>
+					<div class="mt-6">
+						if len(calendar.Entries) == 0 {
+							<p class="text-center text-gray-500">No entries found for this calendar for { time.Month(currentMonth).String() } { strconv.Itoa(currentYear) }.</p>
+						} else {
+							<table class="w-full border-collapse">
+								<thead>
+									<tr class="border-b">
+										<th class="text-left py-2 px-4">Date</th>
+										<th class="text-left py-2 px-4">Year</th>
+										<th class="text-left py-2 px-4">Month</th>
+										<th class="text-left py-2 px-4">Week</th>
+										<th class="text-right py-2 px-4">Hours</th>
+										<th class="text-right py-2 px-4">Text</th>
+										<th class="text-right py-2 px-4">Resource</th>
+									</tr>
+								</thead>
+								<tbody>
+									for _, entry := range calendar.Entries {
+										<tr class="border-b hover:bg-gray-50">
+											<td class="py-2 px-4">{ entry.Date.Format("2006-01-02") }</td>
+											<td class="py-2 px-4">{ strconv.Itoa(entry.Year) }</td>
+											<td class="py-2 px-4">{ strconv.Itoa(entry.Month) }</td>
+											<td class="py-2 px-4">{ strconv.Itoa(entry.Week) }</td>
+											<td class="py-2 px-4 text-right">{ fmt.Sprintf("%.2f", entry.Hours) }</td>
+											<td class="py-2 px-4 text-right">{ entry.Text }</td>
+											<td class="py-2 px-4 text-right">{ entry.WorkResource.Name }</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+} */
+templ CalendarViewMonthly(calendar Calendar, resources []WorkResource, totalResource int, currentYear int, currentMonth int, workStats WorkMonthStats) {
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<div class="w-full justify-center gap-10">
+			<div class="mt-10 lg:mt-20">
+				<div class="max-w-4xl mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
+					<h2 class="text-center text-2xl font-medium">Calendar: { calendar.Name }</h2>
+					
+					<div class="flex justify-center">
+						<form hx-boost="true" method="get" class="flex gap-4 items-center">
+							<label for="month-filter">Filter by month:</label>
+							<select id="month-filter" name="month" onchange="this.form.submit()" class="border rounded px-2 py-1 bg-gray-500">
+								for m := 1; m <= 12; m++ {
+									<option value={ strconv.Itoa(m) } selected?={ m == currentMonth }>
+										{ time.Month(m).String() }
+									</option>
+								}
+							</select>
+							<select id="year-filter" name="year" onchange="this.form.submit()" class="border rounded px-2 py-1 bg-gray-500">
+								for y := time.Now().Year() - 2; y <= time.Now().Year() + 2; y++ {
+									<option value={ strconv.Itoa(y) } selected?={ y == currentYear }>
+										{ strconv.Itoa(y) }
+									</option>
+								}
+							</select>
+							<button type="submit" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Apply</button>
+						</form>
+					</div>
+					
+					<!-- Monthly Work Statistics -->
+					<div class="mt-4 p-4 bg-gray-500 rounded-md border">
+						<h3 class="text-lg font-medium mb-3">Month Work Statistics</h3>
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div>
+								<p><span class="font-medium">Working Days:</span> { strconv.Itoa(workStats.WorkingDays) } days</p>
+								<p><span class="font-medium">Total Work Hours:</span> { fmt.Sprintf("%.2f", workStats.TotalWorkHours) } hours</p>
+								<p><span class="font-medium">Daily Work Hours:</span> { fmt.Sprintf("%.2f", calendar.DailyWorkHours) } hours</p>
+							</div>
+							<div>
+								<p><span class="font-medium">Logged Hours:</span> { fmt.Sprintf("%.2f", workStats.LoggedHours) } hours</p>
+								<p><span class="font-medium">Remaining Hours:</span> { fmt.Sprintf("%.2f", workStats.TotalWorkHours - workStats.LoggedHours) } hours</p>
+								<p><span class="font-medium">Progress:</span> { fmt.Sprintf("%.1f%%", workStats.Progress) }</p>
+							</div>
+						</div>
+					</div>
+					
+					<!-- Holidays Section -->
+					if len(workStats.Holidays) > 0 {
+						<div class="mt-4 p-4 bg-red-400 rounded-md border border-red-200">
+							<h3 class="text-lg font-medium mb-3">Finnish Holidays in { time.Month(currentMonth).String() }</h3>
+							<ul class="list-disc pl-5">
+								for _, holiday := range workStats.Holidays {
+									<li>
+										<span class="font-medium">{ holiday.Date.Format("Mon, Jan 2") }:</span> { holiday.Name } ({ holiday.Description })
+									</li>
+								}
+							</ul>
+						</div>
+					}
+					
+					<div class="flex justify-between">
+						<a href="/calendars" class="text-blue-600 hover:underline">← Back to Calendars</a>
+						<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources/create") } { components.ButtonAttrs()... }>Add resource</a>
+						<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entries/create") } { components.ButtonAttrs()... }>Add Entry</a>
+					</div>
+					
+					<!-- Resources Section -->
+					<div class="mt-6">
+						if len(resources) == 0 {
+							<p class="text-center text-gray-500">No resources found for this calendar.</p>
+						} else {
+							<div class="border rounded-md p-4">
+								<h3 class="font-medium mb-3">Resources for this calendar total: {fmt.Sprintf("%d%%", totalResource)}
+									<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources") } class="text-blue-600 hover:underline ml-2">Resource list</a>
+								</h3>
+								<table class="w-full border-collapse">
+									<thead>
+										<tr class="border-b">
+											<th class="text-left py-2 px-4">Resource</th>
+											<th class="text-right py-2 px-4">Allocation</th>
+											<th class="text-right py-2 px-4">Monthly Hours</th>
+											<th class="text-right py-2 px-4">Logged Hours</th>
+											<th class="text-right py-2 px-4">Progress</th>
+										</tr>
+									</thead>
+									<tbody>
+										for _, r := range resources {
+											<tr class="border-b hover:bg-gray-50">
+												<td class="py-2 px-4">{ r.Name }</td>
+												<td class="py-2 px-4 text-right">{ fmt.Sprintf("%d%%", r.ResourcesPercentage) }</td>
+												<td class="py-2 px-4 text-right">
+													{ fmt.Sprintf("%.2f", workStats.TotalWorkHours * float64(r.ResourcesPercentage) / 100) }
+												</td>
+												<td class="py-2 px-4 text-right">
+													if rs, ok := workStats.ResourceStats[r.ID]; ok {
+														{ fmt.Sprintf("%.2f", rs.LoggedHours) }
+													} else {
+														0.00
+													}
+												</td>
+												<td class="py-2 px-4 text-right">
+													if rs, ok := workStats.ResourceStats[r.ID]; ok {
+														{ fmt.Sprintf("%.1f%%", rs.Progress) }
+													} else {
+														0.0%
+													}
+												</td>
+											</tr>
+										}
+									</tbody>
+								</table>
+							</div>
+						}
+					</div>
+					
+					<!-- Entries Section -->
+					<div class="mt-6">
+						if len(calendar.Entries) == 0 {
+							<p class="text-center text-gray-500">No entries found for this calendar for { time.Month(currentMonth).String() } { strconv.Itoa(currentYear) }.</p>
+						} else {
+							<table class="w-full border-collapse">
+								<thead>
+									<tr class="border-b">
+										<th class="text-left py-2 px-4">Date</th>
+										<th class="text-left py-2 px-4">Week</th>
+										<th class="text-right py-2 px-4">Hours</th>
+										<th class="text-right py-2 px-4">Text</th>
+										<th class="text-right py-2 px-4">Resource</th>
+									</tr>
+								</thead>
+								<tbody>
+									for _, entry := range calendar.Entries {
+										<tr class="border-b hover:bg-gray-50">
+											<td class="py-2 px-4">{ entry.Date.Format("2006-01-02") }</td>
+											<td class="py-2 px-4">{ strconv.Itoa(entry.Week) }</td>
+											<td class="py-2 px-4 text-right">{ fmt.Sprintf("%.2f", entry.Hours) }</td>
+											<td class="py-2 px-4 text-right">{ entry.Text }</td>
+											<td class="py-2 px-4 text-right">{ entry.WorkResource.Name }</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}

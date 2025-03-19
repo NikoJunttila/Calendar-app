@@ -1,0 +1,72 @@
+package components
+
+templ Navigation() {
+	<nav class="border-b border-gray-200 py-4 shadow-lg">
+		<div class="container mx-auto px-6 flex justify-between items-center">
+			<!-- Left side: Brand and Public Links -->
+			<div class="flex items-center space-x-10">
+				<!-- Brand -->
+				<a href="/" class="flex items-center space-x-2 group">
+					<span class="text-3xl font-extrabold text-indigo-600 transition-all duration-300 group-hover:text-indigo-700">
+						superkit
+					</span>
+					<span class="text-sm font-medium text-indigo-400 mt-1">v0.1</span>
+				</a>
+				
+				<!-- Public Links -->
+				<div class="flex space-x-5 border-l border-gray-200 pl-6">
+					<a href="/login" class="px-4 py-2 rounded-full font-medium text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200">
+						Login
+					</a>
+					<a href="/signup" class="px-4 py-2 rounded-full font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-all duration-200 shadow-sm">
+						Sign Up
+					</a>
+				</div>
+			</div>
+
+			<!-- Right side: Grouped Routes -->
+			<div class="flex items-center space-x-12">
+				<!-- Navigation Groups -->
+				<div class="flex items-center space-x-8">
+					<!-- Reservations Group -->
+					<div class="flex space-x-6 relative group">
+						<div class="absolute -left-3 top-0 h-full w-px bg-gray-200"></div>
+						<a href="/calendars" class="font-semibold text-gray-700 hover:text-indigo-600 px-3 py-1.5 rounded-md hover:bg-indigo-50 transition-colors duration-200">
+							calendars
+						</a>
+						<a href="/calendars/create" class="font-semibold text-gray-700 hover:text-indigo-600 px-3 py-1.5 rounded-md hover:bg-indigo-50 transition-colors duration-200">
+							create
+						</a>
+						<a href="/day" class="font-semibold text-gray-700 hover:text-indigo-600 px-3 py-1.5 rounded-md hover:bg-indigo-50 transition-colors duration-200">
+							day
+						</a>
+					</div>
+
+					<!-- Admin Group -->
+					<div class="flex space-x-6 border-l border-gray-200 pl-6">
+						<a href="/admin/timeslots/create" class="font-semibold text-red-600 hover:text-red-700 px-3 py-1.5 rounded-md hover:bg-red-50 transition-colors duration-200">
+							Add TimeSlot
+						</a>
+					</div>
+
+					<!-- Other Routes -->
+					<div class="flex space-x-6 border-l border-gray-200 pl-6">
+						<a href="/hello" class="font-semibold text-gray-700 hover:text-indigo-600 px-3 py-1.5 rounded-md hover:bg-indigo-50 transition-colors duration-200">
+							Hello
+						</a>
+						<a href="/hello/read" class="font-semibold text-gray-700 hover:text-indigo-600 px-3 py-1.5 rounded-md hover:bg-indigo-50 transition-colors duration-200">
+							Read
+						</a>
+					</div>
+				</div>
+
+				<!-- Theme Switcher -->
+				<div class="pl-6 border-l border-gray-200">
+					<button class="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200">
+						@ThemeSwitcher()
+					</button>
+				</div>
+			</div>
+		</div>
+	</nav>
+}

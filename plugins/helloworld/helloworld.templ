@@ -1,0 +1,45 @@
+package helloworld
+
+import (
+v "github.com/anthdm/superkit/validate"
+"gothstack/app/views/components"
+"gothstack/app/views/layouts"
+)
+
+
+
+templ Helloworld(data HelloworldPageData){
+    @layouts.BaseLayout() {
+    @components.Navigation()
+    <div class="w-full justify-center gap-10">
+        <div class="mt-10 lg:mt-40">
+            <div class="max-w-sm mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
+                <h2 class="text-center text-2xl font-medium">Hello World</h2>
+                <p class="text-center">This is a simple plugin that displays a hello world message.</p>
+                @PostMessage(data.FormValues, data.FormErrors)
+            </div>
+        </div>
+    </div>
+    }
+}
+
+templ PostMessage(values HelloworldFormValues, errors v.Errors) {
+	<form hx-post="/helloworld" class="flex flex-col gap-4">
+		<div class="flex flex-col gap-1">
+			<label for="message">Message</label>
+			<input  { components.InputAttrs(errors.Has("message"))... } type="text" name="message" id="message" value={ values.Message }/>
+			if errors.Has("message") {
+				<div class="text-red-500 text-xs">{ errors.Get("message")[0] }</div>
+			}
+		</div>
+		<button { components.ButtonAttrs()... }>
+			Send message
+		</button>
+        if values.successMessage != "" {
+            <div class="mt-4">
+                <p class="text-center text-lg font-medium">{ values.successMessage }</p>
+            </div>
+        }
+	</form>
+}
+

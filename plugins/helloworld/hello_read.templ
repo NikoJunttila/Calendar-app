@@ -1,0 +1,54 @@
+package helloworld
+
+import (
+	"gothstack/app/views/components"
+	"gothstack/app/views/layouts"
+	"time"
+	"strconv"
+)
+
+templ HelloworldRead(messages []HelloworldMessage) {
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<div class="w-full justify-center gap-10">
+			<div class="mt-10 lg:mt-40">
+				<div class="max-w-sm mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
+					<h1 class="text-2xl font-bold text-center">Helloworld Messages</h1>
+					
+					if len(messages) == 0 {
+						<div class="text-center text-gray-500 py-4">
+							<p>No messages found.</p>
+						</div>
+					} else {
+						<ul class="divide-y divide-gray-200">
+							for _, msg := range messages {
+								<li class="py-4">
+									<div class="flex flex-col gap-1">
+										<p class="font-medium break-words">{msg.Message}</p>
+										<div class="flex justify-between text-xs text-gray-500">
+											<span>ID: {strconv.FormatUint(uint64(msg.ID), 10)}</span>
+											<time datetime={msg.CreatedAt.Format(time.RFC3339)}>
+												{formatDate(msg.CreatedAt)}
+											</time>
+										</div>
+									</div>
+								</li>
+							}
+						</ul>
+					}
+					
+					<div class="flex justify-center mt-4">
+						<a href="/hello" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition">
+							Create New Message
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// Helper function to format dates in a readable way
+func formatDate(date time.Time) string {
+    return date.Format("Jan 2, 2006 at 3:04 PM")
+}
