@@ -1,6 +1,7 @@
 package calendar
 
 import (
+	"fmt"
 	"gothstack/app/db"
 	"gothstack/plugins/auth"
 	"time"
@@ -136,31 +137,6 @@ func GetCalendarWithEntriesByMonth(calendarID uint, ownerID uint, year, month in
 	return calendar, nil
 }
 
-// CreateCalendarEntry creates a new calendar entry
-func CreateCalendarEntry(calendarID uint, date time.Time, text string, hours float64, id uint) (CalendarEntry, error) {
-	entry := CalendarEntry{
-		CalendarID:     calendarID,
-		Date:           date,
-		Year:           date.Year(),
-		Month:          int(date.Month()),
-		Week:           getISOWeek(date),
-		Hours:          hours,
-		Text:           text,
-		WorkResourceID: id,
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
-	}
-	result := db.Get().Create(&entry)
-	return entry, result.Error
-}
-
-// GetCalendarEntry retrieves a calendar entry by its ID
-func GetCalendarEntry(id uint) (CalendarEntry, error) {
-	var entry CalendarEntry
-	result := db.Get().First(&entry, id)
-	return entry, result.Error
-}
-
 // ListCalendarEntries returns all entries for a specific calendar
 func ListCalendarEntries(calendarID uint) ([]CalendarEntry, error) {
 	var entries []CalendarEntry
@@ -180,6 +156,72 @@ func GetEntriesByYearMonth(calendarID uint, year, month int) ([]CalendarEntry, e
 	var entries []CalendarEntry
 	result := db.Get().Where("calendar_id = ? AND year = ? AND month = ?", calendarID, year, month).Order("date asc").Find(&entries)
 	return entries, result.Error
+}
+
+// GetCalendarEntry retrieves a calendar entry by its ID
+func GetCalendarEntry(entryID uint) (CalendarEntry, error) {
+	var entry CalendarEntry
+	result := db.Get().First(&entry, entryID)
+	if result.Error != nil {
+		return entry, fmt.Errorf("failed to retrieve calendar entry: %w", result.Error)
+	}
+	return entry, nil
+}
+
+// CreateCalendarEntry creates a new calendar entry
+func CreateCalendarEntry(calendarID uint, date time.Time, text string, hours float64, workResourceID uint) (CalendarEntry, error) {
+	entry := CalendarEntry{
+		CalendarID:     calendarID,
+		Date:           date,
+		Year:           date.Year(),
+		Month:          int(date.Month()),
+		Week:           getISOWeek(date),
+		Hours:          hours,
+		Text:           text,
+		WorkResourceID: workResourceID,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+	result := db.Get().Create(&entry)
+	if result.Error != nil {
+		return entry, fmt.Errorf("failed to create calendar entry: %w", result.Error)
+	}
+	return entry, nil
+}
+
+// UpdateCalendarEntry updates an existing calendar entry
+func UpdateCalendarEntry(entryID uint, date time.Time, text string, hours float64, workResourceID uint) (CalendarEntry, error) {
+	var entry CalendarEntry
+	result := db.Get().First(&entry, entryID)
+	if result.Error != nil {
+		return entry, fmt.Errorf("failed to retrieve calendar entry: %w", result.Error)
+	}
+
+	// Update the entry fields
+	entry.Date = date
+	entry.Year = date.Year()
+	entry.Month = int(date.Month())
+	entry.Week = getISOWeek(date)
+	entry.Text = text
+	entry.Hours = hours
+	entry.WorkResourceID = workResourceID
+	entry.UpdatedAt = time.Now()
+
+	// Save the updated entry
+	result = db.Get().Save(&entry)
+	if result.Error != nil {
+		return entry, fmt.Errorf("failed to update calendar entry: %w", result.Error)
+	}
+	return entry, nil
+}
+
+// DeleteCalendarEntry deletes a calendar entry
+func DeleteCalendarEntry(entryID uint) error {
+	result := db.Get().Delete(&CalendarEntry{}, entryID)
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete calendar entry: %w", result.Error)
+	}
+	return nil
 }
 
 // getISOWeek returns the ISO 8601 week number for a given date

@@ -167,6 +167,7 @@ templ CalendarView(calendar Calendar, resources []WorkResource, totalResource in
 										<th class="text-right py-2 px-4">Hours</th>
 										<th class="text-right py-2 px-4">Text</th>
 										<th class="text-right py-2 px-4">Resource</th>
+										<th class="text-right py-2 px-4">Actions</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -177,6 +178,19 @@ templ CalendarView(calendar Calendar, resources []WorkResource, totalResource in
 											<td class="py-2 px-4 text-right">{ fmt.Sprintf("%.2f", entry.Hours) }</td>
 											<td class="py-2 px-4 text-right">{ entry.Text }</td>
 											<td class="py-2 px-4 text-right">{ entry.WorkResource.Name }</td>
+											<td class="px-6 py-4 whitespace-nowrap">
+											<div class="flex space-x-2 ">
+												<a 
+												href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entry/" + strconv.FormatUint(uint64(entry.ID), 10) + "/edit") } class="text-blue-600 hover:text-blue-800 ml-auto">
+													Edit
+												</a>
+												<button hx-delete={ string(templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entry/" + strconv.FormatUint(uint64(entry.ID), 10))) } 
+														hx-confirm="Are you sure you want to delete this resource?" 
+														class="text-red-600 hover:text-red-800">
+													Delete
+												</button>
+											</div>
+										</td>
 										</tr>
 									}
 								</tbody>
@@ -188,7 +202,7 @@ templ CalendarView(calendar Calendar, resources []WorkResource, totalResource in
 		</div>
 	}
 }
-
+//calendars/1/month?year=?month=
 templ CalendarViewMonthly(calendar Calendar, resources []WorkResource, totalResource int, currentYear int, currentMonth int, workStats WorkMonthStats) {
 	@layouts.BaseLayout() {
 		@components.Navigation()

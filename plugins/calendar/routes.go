@@ -31,12 +31,11 @@ func InitRoutes(router chi.Router, authConfig kit.AuthenticationConfig) {
 		auth.Post("/calendars/{id}/resources/{resource_id}/edit", kit.Handler(HandleWorkResourceEditPost))
 
 		// Edit a work entries
-		auth.Get("/calendars/{id}/entry/{entry_id}/edit", kit.Handler(HandleWorkResourceEdit))
-		auth.Post("/calendars/{id}/entry/{entry_id}/edit", kit.Handler(HandleWorkResourceEditPost))
-		auth.Delete("/calendars/{id}/entry/{entry_id}", kit.Handler(HandleWorkResourceDelete))
+		auth.Get("/calendars/{id}/entry/{entry_id}/edit", kit.Handler(HandleCalendarEntryEdit))
+		auth.Post("/calendars/{id}/entry/{entry_id}/edit", kit.Handler(HandleCalendarEntryEditPost))
+		auth.Delete("/calendars/{id}/entry/{entry_id}", kit.Handler(HandleCalendarEntryDelete))
 
 		// Delete a work resource
 		auth.Delete("/calendars/{id}/resources/{resource_id}", kit.Handler(HandleWorkResourceDelete))
-
 	})
 }
