@@ -3,6 +3,7 @@ package calendar
 import (
     "fmt"
 	"time"
+	"strings"
 	"strconv"
 	v "github.com/anthdm/superkit/validate"
 	"gothstack/app/views/components"
@@ -204,164 +205,320 @@ templ CalendarView(calendar Calendar, resources []WorkResource, totalResource in
 }
 //calendars/1/month?year=?month=
 templ CalendarViewMonthly(calendar Calendar, resources []WorkResource, totalResource int, currentYear int, currentMonth int, workStats WorkMonthStats) {
-	@layouts.BaseLayout() {
-		@components.Navigation()
-		<div class="w-full justify-center gap-10">
-			<div class="mt-10 lg:mt-20">
-				<div class="max-w-4xl mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
-					<h2 class="text-center text-2xl font-medium">Calendar: { calendar.Name }</h2>
-					
-					<div class="flex justify-center">
-						<form hx-boost="true" method="get" class="flex gap-4 items-center">
-							<label for="month-filter">Filter by month:</label>
-							<select id="month-filter" name="month" onchange="this.form.submit()" class="border rounded px-2 py-1 bg-gray-500">
-								for m := 1; m <= 12; m++ {
-									<option value={ strconv.Itoa(m) } selected?={ m == currentMonth }>
-										{ time.Month(m).String() }
-									</option>
-								}
-							</select>
-							<select id="year-filter" name="year" onchange="this.form.submit()" class="border rounded px-2 py-1 bg-gray-500">
-								for y := time.Now().Year() - 2; y <= time.Now().Year() + 2; y++ {
-									<option value={ strconv.Itoa(y) } selected?={ y == currentYear }>
-										{ strconv.Itoa(y) }
-									</option>
-								}
-							</select>
-							<button type="submit" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Apply</button>
-						</form>
-					</div>
-					
-					<!-- Monthly Work Statistics -->
-					<div class="mt-4 p-4 bg-gray-500 rounded-md border">
-						<h3 class="text-lg font-medium mb-3">Month Work Statistics</h3>
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<div>
-								<p><span class="font-medium">Working Days:</span> { strconv.Itoa(workStats.WorkingDays) } days</p>
-								<p><span class="font-medium">Total Work Hours:</span> { fmt.Sprintf("%.2f", workStats.TotalWorkHours) } hours</p>
-								<p><span class="font-medium">Daily Work Hours:</span> { fmt.Sprintf("%.2f", calendar.DailyWorkHours) } hours</p>
-							</div>
-							<div>
-								<p><span class="font-medium">Logged Hours:</span> { fmt.Sprintf("%.2f", workStats.LoggedHours) } hours</p>
-								<p><span class="font-medium">Remaining Hours:</span> { fmt.Sprintf("%.2f", workStats.TotalWorkHours - workStats.LoggedHours) } hours</p>
-								<p><span class="font-medium">Progress:</span> { fmt.Sprintf("%.1f%%", workStats.Progress) }</p>
-							</div>
-						</div>
-					</div>
-					
-					<!-- Holidays Section -->
-					if len(workStats.Holidays) > 0 {
-						<div class="mt-4 p-4 bg-red-400 rounded-md border border-red-200">
-							<h3 class="text-lg font-medium mb-3">Finnish Holidays in { time.Month(currentMonth).String() }</h3>
-							<ul class="list-disc pl-5">
-								for _, holiday := range workStats.Holidays {
-									<li>
-										<span class="font-medium">{ holiday.Date.Format("Mon, Jan 2") }:</span> { holiday.Name } ({ holiday.Description })
-									</li>
-								}
-							</ul>
-						</div>
-					}
-					
-					<div class="flex justify-between">
-						<a href="/calendars" class="text-blue-600 hover:underline">← Back to Calendars</a>
-						<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources/create") } { components.ButtonAttrs()... }>Add resource</a>
-						<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entries/create") } { components.ButtonAttrs()... }>Add Entry</a>
-					</div>
-					
-					<!-- Resources Section -->
-					<div class="mt-6">
-						if len(resources) == 0 {
-							<p class="text-center text-gray-500">No resources found for this calendar.</p>
-						} else {
-							<div class="border rounded-md p-4">
-								<h3 class="font-medium mb-3">Resources for this calendar total: {fmt.Sprintf("%d%%", totalResource)}
-									<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources") } class="text-blue-600 hover:underline ml-2">Resource list</a>
-								</h3>
-								<table class="w-full border-collapse">
-									<thead>
-										<tr class="border-b">
-											<th class="text-left py-2 px-4">Resource</th>
-											<th class="text-right py-2 px-4">Allocation</th>
-											<th class="text-right py-2 px-4">Monthly Hours</th>
-											<th class="text-right py-2 px-4">Logged Hours</th>
-											<th class="text-right py-2 px-4">Progress</th>
-										</tr>
-									</thead>
-									<tbody>
-										for _, r := range resources {
-											<tr class="border-b">
-												<td class="py-2 px-4">{ r.Name }</td>
-												<td class="py-2 px-4 text-right">{ fmt.Sprintf("%d%%", r.ResourcesPercentage) }</td>
-												<td class="py-2 px-4 text-right">
-													{ fmt.Sprintf("%.2f", workStats.TotalWorkHours * float64(r.ResourcesPercentage) / 100) }
-												</td>
-												<td class="py-2 px-4 text-right">
-													if rs, ok := workStats.ResourceStats[r.ID]; ok {
-														{ fmt.Sprintf("%.2f", rs.LoggedHours) }
-													} else {
-														0.00
-													}
-												</td>
-												<td class="py-2 px-4 text-right">
-													if rs, ok := workStats.ResourceStats[r.ID]; ok {
-														{ fmt.Sprintf("%.1f%%", rs.Progress) }
-													} else {
-														0.0%
-													}
-												</td>
-											</tr>
-										}
-									</tbody>
-								</table>
-							</div>
-						}
-					</div>
-					
-					<!-- Entries Section -->
-					<div class="mt-6">
-						if len(calendar.Entries) == 0 {
-							<p class="text-center text-gray-500">No entries found for this calendar for { time.Month(currentMonth).String() } { strconv.Itoa(currentYear) }.</p>
-						} else {
-							<table class="w-full border-collapse">
-								<thead>
-									<tr class="border-b">
-										<th class="text-left py-2 px-4">Date</th>
-										<th class="text-left py-2 px-4">Week</th>
-										<th class="text-right py-2 px-4">Hours</th>
-										<th class="text-right py-2 px-4">Text</th>
-										<th class="text-right py-2 px-4">Resource</th>
-										<th class="text-right py-2 px-4">Actions</th>
-									</tr>
-								</thead>
-								<tbody>
-									for _, entry := range calendar.Entries {
-										<tr class="border-b">
-											<td class="py-2 px-4">{ entry.Date.Format("02.01.2006") }</td>
-											<td class="py-2 px-4">{ strconv.Itoa(entry.Week) }</td>
-											<td class="py-2 px-4 text-right">{ fmt.Sprintf("%.2f", entry.Hours) }</td>
-											<td class="py-2 px-4 text-right">{ entry.Text }</td>
-											<td class="py-2 px-4 text-right">{ entry.WorkResource.Name }</td>
-										<td class="px-6 py-4 whitespace-nowrap">
-											<div class="flex space-x-2">
-												<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entry/" + strconv.FormatUint(uint64(entry.ID), 10) + "/edit") } class="text-blue-600 hover:text-blue-800">
-													Edit
-												</a>
-												<button hx-delete={ string(templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entry/" + strconv.FormatUint(uint64(entry.ID), 10))) } 
-														hx-confirm="Are you sure you want to delete this resource?" 
-														class="text-red-600 hover:text-red-800">
-													Delete
-												</button>
-											</div>
-										</td>
-										</tr>
-									}
-								</tbody>
-							</table>
-						}
-					</div>
-				</div>
-			</div>
-		</div>
-	}
+    @layouts.BaseLayout() {
+        @components.Navigation()
+        <div class="w-full justify-center gap-10">
+            <div class="mt-10 lg:mt-20">
+                <div class="max-w-6xl mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
+                    <h2 class="text-center text-2xl font-medium">Calendar: { calendar.Name }</h2>
+                    
+                    <!-- Month/Year Selector -->
+                    <div class="flex justify-center">
+                        <form hx-boost="true" method="get" class="flex gap-4 items-center">
+                            <label for="month-filter">Filter by month:</label>
+                            <select id="month-filter" name="month" onchange="this.form.submit()" class="border rounded px-2 py-1 bg-gray-500">
+                                for m := 1; m <= 12; m++ {
+                                    <option value={ strconv.Itoa(m) } selected?={ m == currentMonth }>
+                                        { time.Month(m).String() }
+                                    </option>
+                                }
+                            </select>
+                            <select id="year-filter" name="year" onchange="this.form.submit()" class="border rounded px-2 py-1 bg-gray-500">
+                                for y := time.Now().Year() - 2; y <= time.Now().Year() + 2; y++ {
+                                    <option value={ strconv.Itoa(y) } selected?={ y == currentYear }>
+                                        { strconv.Itoa(y) }
+                                    </option>
+                                }
+                            </select>
+                            <button type="submit" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Apply</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Monthly Work Statistics -->
+                    <div class="mt-4 p-4 bg-gray-500 rounded-md border">
+                        <h3 class="text-lg font-medium mb-3">Month Work Statistics</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <p><span class="font-medium">Working Days:</span> { strconv.Itoa(workStats.WorkingDays) } days</p>
+                                <p><span class="font-medium">Total Work Hours:</span> { fmt.Sprintf("%.2f", workStats.TotalWorkHours) } hours</p>
+                                <p><span class="font-medium">Daily Work Hours:</span> { fmt.Sprintf("%.2f", calendar.DailyWorkHours) } hours</p>
+                            </div>
+                            <div>
+                                <p><span class="font-medium">Logged Hours:</span> { fmt.Sprintf("%.2f", workStats.LoggedHours) } hours</p>
+                                <p><span class="font-medium">Remaining Hours:</span> { fmt.Sprintf("%.2f", workStats.TotalWorkHours - workStats.LoggedHours) } hours</p>
+                                <p><span class="font-medium">Progress:</span> { fmt.Sprintf("%.1f%%", workStats.Progress) }</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Holidays Section -->
+                    if len(workStats.Holidays) > 0 {
+                        <div class="mt-4 p-4 bg-red-400 rounded-md border border-red-200">
+                            <h3 class="text-lg font-medium mb-3">Finnish Holidays in { time.Month(currentMonth).String() }</h3>
+                            <ul class="list-disc pl-5">
+                                for _, holiday := range workStats.Holidays {
+                                    <li>
+                                        <span class="font-medium">{ holiday.Date.Format("Mon, Jan 2") }:</span> { holiday.Name } ({ holiday.Description })
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    
+                    <!-- Action buttons -->
+                    <div class="flex justify-between">
+                        <a href="/calendars" class="text-blue-600 hover:underline">← Back to Calendars</a>
+                        <div class="flex gap-2">
+                            <a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources/create") } { components.ButtonAttrs()... }>Add resource</a>
+                            <a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entries/create") } { components.ButtonAttrs()... }>Add Entry</a>
+                        </div>
+                    </div>
+                    
+                    <!-- Resources Section -->
+                    <div class="mt-6">
+                        if len(resources) == 0 {
+                            <p class="text-center text-gray-500">No resources found for this calendar.</p>
+                        } else {
+                            <div class="border rounded-md p-4">
+                                <h3 class="font-medium mb-3">Resources for this calendar total: {fmt.Sprintf("%d%%", totalResource)}
+                                    <a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources") } class="text-blue-600 hover:underline ml-2">Resource list</a>
+                                </h3>
+                                <table class="w-full border-collapse">
+                                    <thead>
+                                        <tr class="border-b">
+                                            <th class="text-left py-2 px-4">Resource</th>
+                                            <th class="text-right py-2 px-4">Allocation</th>
+                                            <th class="text-right py-2 px-4">Monthly Hours</th>
+                                            <th class="text-right py-2 px-4">Logged Hours</th>
+                                            <th class="text-right py-2 px-4">Progress</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        for _, r := range resources {
+                                            <tr class="border-b">
+                                                <td class="py-2 px-4">{ r.Name }</td>
+                                                <td class="py-2 px-4 text-right">{ fmt.Sprintf("%d%%", r.ResourcesPercentage) }</td>
+                                                <td class="py-2 px-4 text-right">
+                                                    { fmt.Sprintf("%.2f", workStats.TotalWorkHours * float64(r.ResourcesPercentage) / 100) }
+                                                </td>
+                                                <td class="py-2 px-4 text-right">
+                                                    if rs, ok := workStats.ResourceStats[r.ID]; ok {
+                                                        { fmt.Sprintf("%.2f", rs.LoggedHours) }
+                                                    } else {
+                                                        0.00
+                                                    }
+                                                </td>
+                                                <td class="py-2 px-4 text-right">
+                                                    if rs, ok := workStats.ResourceStats[r.ID]; ok {
+                                                        { fmt.Sprintf("%.1f%%", rs.Progress) }
+                                                    } else {
+                                                        0.0%
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                    
+                    <!-- Monthly Calendar View -->
+                    <div class="mt-8">
+                        <h3 class="text-xl font-medium mb-4">{ time.Month(currentMonth).String() } { strconv.Itoa(currentYear) }</h3>
+                        
+                        <!-- Calendar Header -->
+                        <div class="grid grid-cols-7 gap-1 text-center font-medium">
+                            <div class="p-2">Monday</div>
+                            <div class="p-2">Tuesday</div>
+                            <div class="p-2">Wednesday</div>
+                            <div class="p-2">Thursday</div>
+                            <div class="p-2">Friday</div>
+                            <div class="p-2 text-red-600">Saturday</div>
+                            <div class="p-2 text-red-600">Sunday</div>
+                        </div>
+                        
+                        <!-- Calendar Grid -->
+                        <div class="grid grid-cols-7 gap-1 mt-1">
+                            @renderCalendarDays(calendar, currentYear, currentMonth, workStats)
+                        </div>
+                    </div>
+                    
+                    <!-- Entry List Section (condensed view) -->
+                    <div class="mt-6">
+                        if len(calendar.Entries) == 0 {
+                            <p class="text-center text-gray-500">No entries found for this calendar for { time.Month(currentMonth).String() } { strconv.Itoa(currentYear) }.</p>
+                        } else {
+                            <h3 class="text-xl font-medium mb-4">All Entries List</h3>
+                            <table class="w-full border-collapse">
+                                <thead>
+                                    <tr class="border-b">
+                                        <th class="text-left py-2 px-4">Date</th>
+                                        <th class="text-left py-2 px-4">Week</th>
+                                        <th class="text-right py-2 px-4">Hours</th>
+                                        <th class="text-right py-2 px-4">Text</th>
+                                        <th class="text-right py-2 px-4">Resource</th>
+                                        <th class="text-right py-2 px-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    for _, entry := range calendar.Entries {
+                                        <tr class="border-b">
+                                            <td class="py-2 px-4">{ entry.Date.Format("02.01.2006") }</td>
+                                            <td class="py-2 px-4">{ strconv.Itoa(entry.Week) }</td>
+                                            <td class="py-2 px-4 text-right">{ fmt.Sprintf("%.2f", entry.Hours) }</td>
+                                            <td class="py-2 px-4 text-right">{ entry.Text }</td>
+                                            <td class="py-2 px-4 text-right">{ entry.WorkResource.Name }</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="flex space-x-2">
+                                                    <a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entry/" + strconv.FormatUint(uint64(entry.ID), 10) + "/edit") } class="text-blue-600 hover:text-blue-800">
+                                                        Edit
+                                                    </a>
+                                                    <button hx-delete={ string(templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entry/" + strconv.FormatUint(uint64(entry.ID), 10))) } 
+                                                            hx-confirm="Are you sure you want to delete this entry?" 
+                                                            class="text-red-600 hover:text-red-800">
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+// Helper to render calendar days with entries
+templ renderCalendarDays(calendar Calendar, year int, month int, workStats WorkMonthStats) {
+    // Calculate first day of month and number of days in month
+    @renderCalendarContent(calendar, year, month, workStats)
+}
+
+// This is the proper way to handle complex template logic in templ
+templ renderCalendarContent(calendar Calendar, year int, month int, workStats WorkMonthStats) {
+    // Calculate first day of month and number of days in month
+    @templ.Raw(generateCalendarHTML(calendar, year, month, workStats))
+}
+
+// This function should be placed in your Go code, not in templ file
+func generateCalendarHTML(calendar Calendar, year int, month int, workStats WorkMonthStats) string {
+    var html strings.Builder
+    
+    // Calculate first day of month and number of days in month
+    firstDay := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.Local)
+    lastDay := firstDay.AddDate(0, 1, -1)
+    daysInMonth := lastDay.Day()
+    
+    // Calculate first weekday (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+    // Adjust to make Monday the first day of the week
+    firstWeekday := int(firstDay.Weekday())
+    if firstWeekday == 0 { // Sunday
+        firstWeekday = 6
+    } else {
+        firstWeekday--
+    }
+    
+    // Map to hold entries by day
+    entriesByDay := make(map[int][]CalendarEntry)
+    for _, entry := range calendar.Entries {
+        if entry.Date.Year() == year && int(entry.Date.Month()) == month {
+            day := entry.Date.Day()
+            entriesByDay[day] = append(entriesByDay[day], entry)
+        }
+    }
+    
+    // Map to hold holidays by day
+    holidaysByDay := make(map[int]FinnishHoliday)
+    for _, holiday := range workStats.Holidays {
+        if holiday.Date.Year() == year && int(holiday.Date.Month()) == month {
+            day := holiday.Date.Day()
+            holidaysByDay[day] = holiday
+        }
+    }
+    
+    // Print empty cells for days before the first day of month
+    for i := 0; i < firstWeekday; i++ {
+        html.WriteString(`<div class="h-32 p-2 bg-blue-400 border"></div>`)
+    }
+    
+    // Print days with their entries
+    for day := 1; day <= daysInMonth; day++ {
+        date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local)
+        weekday := date.Weekday()
+        
+        // Determine cell style based on weekday or holiday
+        cellClasses := "min-h-32 p-1 border relative"
+        dayNumClasses := "absolute top-1 right-1 h-6 w-6 flex items-center justify-center rounded-full"
+        
+        isWeekend := weekday == time.Saturday || weekday == time.Sunday
+        isHoliday := false
+        holidayName := ""
+        
+        if _, exists := holidaysByDay[day]; exists {
+            isHoliday = true
+            holidayName = holidaysByDay[day].Name
+        }
+        
+        if isWeekend {
+            cellClasses += " bg-blue-500"
+            dayNumClasses += " text-red-600"
+        } else if isHoliday {
+            cellClasses += " bg-red-100"
+            dayNumClasses += " bg-red-600 text-white"
+        } else {
+            cellClasses += " bg-blue-300"
+            dayNumClasses += " bg-blue-600 text-white"
+        }
+        
+        html.WriteString(`<div class="` + cellClasses + `">`)
+        html.WriteString(`<div class="` + dayNumClasses + `">` + strconv.Itoa(day) + `</div>`)
+        
+        // Holiday indicator
+        if isHoliday {
+            html.WriteString(`<div class="mt-6 text-xs text-red-800 font-medium">` + holidayName + `</div>`)
+        }
+        
+        // Weekly number indicator
+        _, week := date.ISOWeek()
+        html.WriteString(`<div class="text-xs text-black absolute top-1 left-1">W` + strconv.Itoa(week) + `</div>`)
+        
+        // Entries for this day
+        html.WriteString(`<div class="mt-7 space-y-1 overflow-y-auto max-h-24">`)
+        if entries, hasEntries := entriesByDay[day]; hasEntries {
+            for _, entry := range entries {
+                html.WriteString(`<div class="p-1 text-xs bg-blue-100 text-black rounded border border-blue-200 flex justify-between">`)
+                html.WriteString(`<span class="truncate">` + entry.Text + `</span>`)
+                html.WriteString(`<span class="whitespace-nowrap">` + fmt.Sprintf("%.2fh", entry.Hours) + `</span>`)
+                html.WriteString(`</div>`)
+            }
+        }
+        html.WriteString(`</div>`)
+        
+        // Quick add entry link if not weekend or holiday
+        if !isWeekend && !isHoliday {
+            entryURL := "/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entries/create?date=" + date.Format("2006-01-02")
+            html.WriteString(`<a href="` + entryURL + `" class="absolute bottom-1 right-1 text-blue-600 hover:text-blue-800">`)
+            html.WriteString(`<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">`)
+            html.WriteString(`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />`)
+            html.WriteString(`</svg>`)
+            html.WriteString(`</a>`)
+        }
+        
+        html.WriteString(`</div>`)
+    }
+    
+    // Fill remaining cells to complete the grid
+    lastWeekday := (firstWeekday + daysInMonth) % 7
+    if lastWeekday > 0 {
+        for i := lastWeekday; i < 7; i++ {
+            html.WriteString(`<div class="h-32 p-2 bg-blue-400 border"></div>`)
+        }
+    }
+    
+    return html.String()
 }

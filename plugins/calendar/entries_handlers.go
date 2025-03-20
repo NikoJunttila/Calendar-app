@@ -59,9 +59,23 @@ func HandleCalendarEntryCreate(kit *kit.Kit) error {
 		return err
 	}
 
+	dateStr := kit.Request.URL.Query().Get("date")
+	var selectedDate time.Time
+	fmt.Println(dateStr)
+	if dateStr != "" {
+		// Parse the date string (format: "2006-01-02")
+		selectedDate, err = time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			// If invalid date, use current date
+			selectedDate = time.Now()
+		}
+	} else {
+		// No date provided, use current date
+		selectedDate = time.Now()
+	}
 	formValues := CalendarEntryFormValues{
-		Date:  time.Now().Format("2006-01-02"), // Current day
-		Hours: calendar.DailyWorkHours,         // Default hours from calendar
+		Date:  selectedDate.Format("2006-01-02"), // Current day
+		Hours: calendar.DailyWorkHours,           // Default hours from calendar
 	}
 
 	// Render the entry creation form
