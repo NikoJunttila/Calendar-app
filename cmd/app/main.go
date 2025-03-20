@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"gothstack/app"
 	"gothstack/public"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -58,8 +58,21 @@ func disableCache(next http.Handler) http.Handler {
 	})
 }
 
-func init() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal(err)
+/*
+	 func init() {
+		if err := godotenv.Load(); err != nil {
+
+			log.Fatal(err)
+		}
 	}
+*/
+func init() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file:", err)
+	}
+	log.Println("SUPERKIT_ENV:", os.Getenv("SUPERKIT_ENV"))
+	log.Println("HTTP_LISTEN_ADDR:", os.Getenv("HTTP_LISTEN_ADDR"))
+	log.Println("DB_DRIVER:", os.Getenv("DB_DRIVER"))
+	log.Println("DB_NAME:", os.Getenv("DB_NAME"))
 }
