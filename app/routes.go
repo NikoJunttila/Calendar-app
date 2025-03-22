@@ -4,6 +4,7 @@ import (
 	"gothstack/app/handlers"
 	"gothstack/app/views/errors"
 	"gothstack/plugins/auth"
+	"gothstack/plugins/book"
 	"gothstack/plugins/calendar"
 	"gothstack/plugins/helloworld"
 	"log/slog"
@@ -36,6 +37,7 @@ func InitializeRoutes(router *chi.Mux) {
 	auth.InitializeRoutes(router, authConfig)
 	helloworld.InitRoutes(router, authConfig)
 	calendar.InitRoutes(router, authConfig)
+	book.InitRoutes(router, authConfig)
 	// Routes that "might" have an authenticated user
 	router.Group(func(app chi.Router) {
 		app.Use(kit.WithAuthentication(authConfig, false)) // strict set to false
