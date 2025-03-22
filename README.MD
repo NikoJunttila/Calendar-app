@@ -11,6 +11,6 @@ Calendar view allow delete and edit of entry<br>
 Fix juhannus holiday<br>
 
 
-
-
+sudo docker build -t calendar .
+docker run -p 7331:7331 calendar
 
