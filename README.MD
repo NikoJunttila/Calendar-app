@@ -9,8 +9,9 @@ userID := kit.Auth().(auth.Auth).UserID
 TODO<br>
 Calendar view allow delete and edit of entry<br>
 Fix juhannus holiday<br>
+FIX duplicate email signup error <br>
 
+run command to start with docker <br>
+sudo docker-compose up -d <br>
 
-sudo docker build -t calendar .
-docker run -p 7331:7331 calendar
 

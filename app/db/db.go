@@ -25,14 +25,15 @@ func init() {
 	// Create a default *sql.DB exposed by the superkit/db package
 	// based on the given configuration.
 	config := db.Config{
-		// Driver:   os.Getenv("DB_DRIVER"),
-		Driver: "sqlite3",
-		// Name:     os.Getenv("DB_NAME"),
-		Name:     "app_db",
+		Driver:   os.Getenv("DB_DRIVER"),
+		Name:     os.Getenv("DB_NAME"),
 		Password: os.Getenv("DB_PASSWORD"),
 		User:     os.Getenv("DB_USER"),
 		Host:     os.Getenv("DB_HOST"),
 	}
+	log.Println("Using DB file:", os.Getenv("DB_NAME"))
+	log.Println("Using logout dura:", os.Getenv("SUPERKIT_AUTH_SESSION_EXPIRY_IN_HOURS"))
+
 	dbinst, err := db.NewSQL(config)
 	if err != nil {
 		log.Fatal(err)

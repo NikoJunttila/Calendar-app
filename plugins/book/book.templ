@@ -35,7 +35,7 @@ templ BookList(data BookPageData) {
 								</thead>
 								<tbody>
 									for _, book := range data.Books {
-										<tr class="border-b hover:bg-gray-50">
+										<tr class="border-b hover:bg-gray-500">
 											<td class="py-2 px-4">{ book.Name }</td>
 											<td class="py-2 px-4">
 												if book.Pages > 0 {
@@ -86,7 +86,7 @@ templ BookCreate(data BookPageData) {
 
 // BookForm renders the form for creating a book
 templ BookForm(values BookFormValues, errors v.Errors) {
-	<form hx-post="/books/create" hx-encoding="multipart/form-data" class="flex flex-col gap-4">
+	<form hx-post="/books/create" enctype="multipart/form-data" class="flex flex-col gap-4">
 		<div class="flex flex-col gap-1">
 			<label for="name">Book Title</label>
 			<input { components.InputAttrs(errors.Has("name"))... } type="text" name="name" id="name" value={ values.Name }/>

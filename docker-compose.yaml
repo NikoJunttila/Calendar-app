@@ -1,0 +1,23 @@
+services:
+  calendar:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7331:7331"
+    volumes:
+      - calendar-data:/app/data
+    env_file:
+      - .env
+    environment:
+      - HTTP_LISTEN_ADDR=:7331
+      - DB_DRIVER=sqlite3
+      - DB_NAME=/app/data/app.db
+      - MIGRATION_DIR=migrations
+    restart: unless-stopped
+
+volumes:
+  calendar-data:
+    driver: local
+# saves data to /var/lib/docker/volumes/[project-name]_calendar-data/_data
+# docker volume inspect [project-name]_calendar-data

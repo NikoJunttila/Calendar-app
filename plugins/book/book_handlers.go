@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gothstack/plugins/auth"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -18,13 +19,14 @@ import (
 
 const (
 	// Define where uploaded files will be stored
-	uploadDir     = "./uploads/books"
+	//docker location for file storage
+	uploadDir     = "/app/data/books"
 	maxUploadSize = 50 << 20 // 50MB
 )
 
 // Validation schema for book creation
 var bookSchema = v.Schema{
-	//"name": v.Rules(v.Min(1), v.Max(200)),
+	// "name": v.Rules(v.Min(1), v.Max(200)),
 }
 
 // BookPageData holds data for the book pages
@@ -64,19 +66,51 @@ func HandleBookCreate(kit *kit.Kit) error {
 }
 
 // HandleBookCreatePost handles the form submission for creating a book
+//
+// NOTE ON MULTIPART FORM HANDLING:
+// When dealing with multipart/form-data (forms with file uploads), there are two important
+// considerations:
+//  1. The standard Request.ParseMultipartForm() must be called before accessing form values
+//  2. Many validation/binding libraries like superkit/validate don't properly extract values
+//     from multipart forms because they're structured differently than regular form data
+//
+// This is why we manually extract form values using Request.FormValue() instead of relying on
+// automatic binding. The multipart form data is properly sent by the browser (as confirmed in logs)
+// but needs special handling on the server side.
 func HandleBookCreatePost(kit *kit.Kit) error {
 	// Parse multipart form with specified max memory
 	if err := kit.Request.ParseMultipartForm(maxUploadSize); err != nil {
 		return fmt.Errorf("error parsing form: %w", err)
 	}
+	slog.Info("Raw form values", slog.Any("form", kit.Request.MultipartForm))
 
-	// Extract form values
-	var values BookFormValues
+	// MANUAL FORM VALUE EXTRACTION
+	// Instead of using automatic binding which fails with multipart forms,
+	// we extract each form field manually using FormValue()
+	values := BookFormValues{
+		Name:  kit.Request.FormValue("name"),
+		Pages: 0,
+	}
+
+	// Parse pages from form if provided
+	if pagesStr := kit.Request.FormValue("pages"); pagesStr != "" {
+		if pages, err := strconv.Atoi(pagesStr); err == nil {
+			values.Pages = pages
+		}
+	}
+
+	// Then validate manually
+	errors := v.Errors{}
+	if values.Name == "" {
+		errors.Add("name", "Name is required")
+		slog.Info("BookFormValues", slog.Any("values", values))
+	}
 	errors, ok := v.Request(kit.Request, &values, bookSchema)
 	if !ok {
 		return kit.Render(BookForm(values, errors))
 	}
 
+	slog.Info("BookFormValues", slog.Any("values", values))
 	// Extract user ID from authentication
 	auth := kit.Auth().(auth.Auth)
 	userID := auth.UserID
