@@ -1,23 +1,83 @@
-go install github.com/a-h/templ/cmd/templ@latest <br>
-go install github.com/pressly/goose/v3/cmd/goose@latest <br>
+# Calendar App
 
-tailwind watch works kinda scuffed. need to run npx tailwindcss -i app/assets/app.css -o ./public/assets/styles.css
-after new styles added
-<br>
+A modern calendar application with user authentication, event management, and holiday tracking.
+
+## Setup Instructions
+
+### Prerequisites
+
+- Go 1.23 or higher
+- Node.js and npm
+- Docker and Docker Compose
+
+### Required Go Tools
+
+```bash
+# Install templ for HTML templating
+go install github.com/a-h/templ/cmd/templ@latest
+
+# Install goose for database migrations
+go install github.com/pressly/goose/v3/cmd/goose@latest
+```
+
+### Development
+
+#### CSS Build
+
+TailwindCSS is used for styling:
+
+```bash
+# Initial build or after adding new styles
+npx tailwindcss -i app/assets/app.css -o ./public/assets/styles.css
+
+# Watch mode for development
+npx tailwindcss -i app/assets/app.css -o ./public/assets/styles.css --watch
+```
+
+#### Authentication
+
+The application uses an authentication system that can be accessed in handlers via:
+
+```go
 userID := kit.Auth().(auth.Auth).UserID
-<br>
-TODO<br>
-Calendar view allow delete and edit of entry<br>
-Fix juhannus holiday<br>
-FIX duplicate email signup error <br>
+```
 
-run command to start with docker <br>
-sudo docker-compose up -d <br>
-export COMPOSE_BAKE=true in ~/.bashrc for faster build stage
-<br>
-For Cloudflared tunnel hosting.
-create new docker network where we connect all applications.
-sudo docker network create app-network <br>
-sudo docker run -d --name cloudflared --network app-network cloudflare/cloudflared:latest tunnel --no-autoupdate run --token yourtokenhere <br>
+## Deployment
 
+### Docker Compose
 
+Deploy the application using Docker Compose:
+
+```bash
+# Start the application
+sudo docker-compose up -d
+
+# For faster builds, add to your ~/.bashrc:
+export COMPOSE_BAKE=true
+
+# Update from Git with a clean rebuild
+docker compose down && docker compose build --no-cache && docker compose up -d
+```
+
+### Cloudflare Tunnels
+
+To expose the application through Cloudflare Tunnels:
+
+1. Create a Docker network:
+   ```bash
+   sudo docker network create app-network
+   ```
+
+2. Run Cloudflare tunnel:
+   ```bash
+   sudo docker run -d --name cloudflared --network app-network \
+     cloudflare/cloudflared:latest tunnel --no-autoupdate run --token YOUR_TOKEN_HERE
+   ```
+
+3. Make sure your docker-compose.yaml uses the same network.
+
+## TODO List
+
+- [ ] Allow deletion and editing of calendar entries in Calendar view
+- [ ] Fix Juhannus holiday calculation
+- [ ] Fix duplicate email signup error
