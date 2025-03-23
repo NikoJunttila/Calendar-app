@@ -13,5 +13,11 @@ FIX duplicate email signup error <br>
 
 run command to start with docker <br>
 sudo docker-compose up -d <br>
+export COMPOSE_BAKE=true in ~/.bashrc for faster build stage
+<br>
+For Cloudflared tunnel hosting.
+create new docker network where we connect all applications.
+sudo docker network create app-network <br>
+sudo docker run -d --name cloudflared --network app-network cloudflare/cloudflared:latest tunnel --no-autoupdate run --token yourtokenhere <br>
 
 
