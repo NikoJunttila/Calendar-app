@@ -1,6 +1,6 @@
 services:
   calendar:
-    image: ghcr.io/nikojunttila/calendar:latest
+    image: ghcr.io/nikojunttila/calendar-app:latest
 
     # build:
     #   context: .

@@ -52,8 +52,6 @@ Deploy the application using Docker Compose:
 # Start the application
 sudo docker-compose up -d
 
-# For faster builds, add to your ~/.bashrc:
-export COMPOSE_BAKE=true
 
 # Update from Git with a clean rebuild
 docker compose down && docker compose build --no-cache && docker compose up -d
