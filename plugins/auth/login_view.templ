@@ -2,7 +2,6 @@ package auth
 
 import (
 	v "github.com/anthdm/superkit/validate"
-
 	"gothstack/app/views/layouts"
 	"gothstack/app/views/components"
 )
@@ -19,13 +18,23 @@ type LoginFormValues struct {
 
 templ LoginIndex(data LoginIndexPageData) {
 	@layouts.BaseLayout() {
-	@components.Navigation()
-		<div class="w-full justify-center gap-10">
-			<div class="mt-10 lg:mt-40">
-				<div class="max-w-sm mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
-					<h2 class="text-center text-2xl font-medium">Login to SuperKit</h2>
+		@components.Navigation()
+		<div class="flex justify-center items-center min-h-[calc(100vh-80px)] px-4">
+			<div class="w-full max-w-md mx-auto">
+				<div class="border rounded-lg shadow-md py-12 px-8 flex flex-col gap-8">
+					<div class="text-center">
+						<h2 class="text-2xl font-bold mb-2">Login to SuperKit</h2>
+						<p class="text-sm">Enter your credentials to access your account</p>
+					</div>
+
 					@LoginForm(data.FormValues, data.FormErrors)
-					<a class="text-sm underline" href="/signup">Don't have an account? Signup here.</a>
+
+					<div class="flex flex-col items-center gap-3 pt-4 border-t border-gray-100">
+						<a class="text-sm text-indigo-600 hover:text-indigo-700 transition-colors" href="/forgot-password">Forgot your password?</a>
+						<a class="text-sm  hover:text-gray-800 transition-colors" href="/signup">
+							Don't have an account? <span class="font-medium text-indigo-600">Sign up</span>
+						</a>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -33,33 +42,53 @@ templ LoginIndex(data LoginIndexPageData) {
 }
 
 templ LoginForm(values LoginFormValues, errors v.Errors) {
-	<form hx-post="/login" class="flex flex-col gap-4">
-		<div class="flex flex-col gap-1">
-			<label for="email">Email *</label>
-			<input { components.InputAttrs(errors.Has("email"))... } name="email" id="email" value={ values.Email }/>
+	<form hx-post="/login" class="flex flex-col gap-5 w-full">
+		<div class="flex flex-col gap-2">
+			<label for="email" class="text-sm font-medium ">Email Address *</label>
+			<input 
+				{ components.InputAttrs(errors.Has("email"))... } 
+				name="email" 
+				id="email" 
+				value={ values.Email }
+				placeholder="youremail@example.com"
+				class="px-4 py-3 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+			/>
 			if errors.Has("email") {
-				<div class="text-red-500 text-xs">{ errors.Get("email")[0] }</div>
+				<div class="text-red-500 text-xs mt-1">{ errors.Get("email")[0] }</div>
 			}
 		</div>
-		<div class="flex flex-col gap-1">
-			<label for="password">Password *</label>
-			<input { components.InputAttrs(errors.Has("password"))... } type="password" name="password" id="password"/>
+
+		<div class="flex flex-col gap-2">
+			<div class="flex items-center justify-between">
+				<label for="password" class="text-sm font-medium">Password *</label>
+			</div>
+			<input 
+				{ components.InputAttrs(errors.Has("password"))... } 
+				type="password" 
+				name="password" 
+				id="password"
+				placeholder="••••••••"
+				class="px-4 py-3 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+			/>
 			if errors.Has("password") {
-				<ul class="list-disc ml-4">
+				<ul class="list-disc ml-4 mt-1">
 					for _, err := range errors.Get("password") {
 						<li class="text-red-500 text-xs">password { err }</li>
 					}
 				</ul>
 			}
 			if errors.Has("credentials") {
-				<div class="text-red-500 text-xs">{ errors.Get("credentials")[0] }</div>
+				<div class="text-red-500 text-xs mt-1">{ errors.Get("credentials")[0] }</div>
 			}
 			if errors.Has("verified") {
-				<div class="text-red-500 text-xs">{ errors.Get("verified")[0] }</div>
+				<div class="text-red-500 text-xs mt-1">{ errors.Get("verified")[0] }</div>
 			}
 		</div>
-		<button { components.ButtonAttrs()... }>
-			Login
-		</button>
+
+		<div class="mt-2">
+			<button { components.ButtonAttrs()... } class="w-full py-3 text-base font-medium rounded-md shadow-sm">
+				Login
+			</button>
+		</div>
 	</form>
 }
