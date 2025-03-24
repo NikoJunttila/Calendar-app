@@ -1,9 +1,11 @@
 services:
   calendar:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: calendar  # Move this outside of the build section
+    image: ghcr.io/nikojunttila/calendar:latest
+
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    container_name: calendar
     networks:
       - app-network
     ports:
