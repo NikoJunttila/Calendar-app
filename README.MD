@@ -79,3 +79,9 @@ To expose the application through Cloudflare Tunnels:
 - [ ] Allow deletion and editing of calendar entries in Calendar view
 - [ ] Fix Juhannus holiday calculation
 - [ ] Fix duplicate email signup error
+
+docker buildx create --use
+docker buildx build --platform linux/arm64 -t ghcr.io/nikojunttila/calendar:latest --push .
+
+docker pull ghcr.io/nikojunttila/calendar:latest
+docker compose up

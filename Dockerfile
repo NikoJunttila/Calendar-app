@@ -26,6 +26,9 @@ RUN npm install
 # Generate templ files
 RUN templ generate
 
+# Fix ELF image error
+RUN npm rebuild esbuild
+
 # Build the application
 RUN make build
 
