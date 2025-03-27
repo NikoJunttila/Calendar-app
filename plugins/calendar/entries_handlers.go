@@ -267,3 +267,116 @@ func HandleCalendarEntryDelete(kit *kit.Kit) error {
 	// Redirect to the calendar entries list page
 	return kit.Redirect(http.StatusSeeOther, fmt.Sprintf("/calendars/%d", calendarID))
 }
+
+func HandleInlineCalendarEntryCreate(kit *kit.Kit) error {
+	// Handle GET request to render inline form
+	if kit.Request.Method == http.MethodGet {
+		return handleInlineEntryGet(kit)
+	}
+
+	// Handle POST request to create entry
+	if kit.Request.Method == http.MethodPost {
+		return handleInlineEntryPost(kit)
+	}
+
+	return fmt.Errorf("unsupported method")
+}
+
+// handleInlineEntryGet renders the inline entry form
+func handleInlineEntryGet(kit *kit.Kit) error {
+	fmt.Println("handleInlineEntryGet")
+	// Get the calendar ID from the URL parameter
+	calendarIDStr := chi.URLParam(kit.Request, "id")
+	calendarID, err := strconv.ParseUint(calendarIDStr, 10, 32)
+	if err != nil {
+		return fmt.Errorf("invalid calendar ID: %w", err)
+	}
+
+	// Retrieve the calendar details
+	auth := kit.Auth().(auth.Auth)
+	userID := auth.UserID
+	calendar, err := GetCalendar(uint(calendarID), userID)
+	if err != nil {
+		return err
+	}
+
+	// Get resources for this calendar
+	resources, err := ListWorkResourcesByCalendar(uint(calendarID))
+	if err != nil {
+		return err
+	}
+
+	// Parse date from query parameter
+	dateStr := kit.Request.URL.Query().Get("date")
+	var selectedDate time.Time
+	if dateStr != "" {
+		selectedDate, err = time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			selectedDate = time.Now()
+		}
+	} else {
+		selectedDate = time.Now()
+	}
+
+	// Prepare form values
+	formValues := CalendarEntryFormValues{
+		Date:  selectedDate.Format("2006-01-02"),
+		Hours: calendar.DailyWorkHours, // Default hours from calendar
+	}
+
+	// Render the inline entry form
+	return kit.Render(InlineEntryForm(formValues, nil, calendar, resources))
+}
+
+// handleInlineEntryPost creates a new calendar entry
+func handleInlineEntryPost(kit *kit.Kit) error {
+	// Get the calendar ID from the URL parameter
+	calendarIDStr := chi.URLParam(kit.Request, "id")
+	calendarID, err := strconv.ParseUint(calendarIDStr, 10, 32)
+	if err != nil {
+		return fmt.Errorf("invalid calendar ID: %w", err)
+	}
+
+	// Parse and validate the form values
+	var values CalendarEntryFormValues
+	errors, ok := v.Request(kit.Request, &values, calendarEntrySchema)
+
+	// Retrieve the calendar details
+	auth := kit.Auth().(auth.Auth)
+	userID := auth.UserID
+	calendar, err := GetCalendar(uint(calendarID), userID)
+	if err != nil {
+		slog.Error("Failed to get calendar", "error", err)
+		return err
+	}
+
+	// Get resources for this calendar
+	resources, err := ListWorkResourcesByCalendar(uint(calendarID))
+	if err != nil {
+		slog.Error("Failed to list work resources", "error", err)
+		return err
+	}
+
+	// Validate form
+	if !ok {
+		return kit.Render(InlineEntryForm(values, errors, calendar, resources))
+	}
+
+	// Convert the date string to a time.Time value
+	entryDate, err := time.Parse("2006-01-02", values.Date)
+	if err != nil {
+		errors.Add("date", "Invalid date format. Please use YYYY-MM-DD.")
+		return kit.Render(InlineEntryForm(values, errors, calendar, resources))
+	}
+
+	// Create the new calendar entry
+	entry, err := CreateCalendarEntry(uint(calendarID), entryDate, values.Text, values.Hours, values.WorkResourceID)
+	if err != nil {
+		errors.Add("general", "Failed to create calendar entry.")
+		return kit.Render(InlineEntryForm(values, errors, calendar, resources))
+	}
+
+	// Prepare the success response
+	// This will be a component that shows the newly created entry inline
+	return kit.Render(InlineEntrySuccess(entry))
+}

@@ -20,13 +20,15 @@ import (
 const (
 	// Define where uploaded files will be stored
 	//docker location for file storage
-	uploadDir     = "/app/data/books"
+	// uploadDir     = "/app/data/books"
 	maxUploadSize = 50 << 20 // 50MB
 )
 
+var uploadDir = "/app/data/books"
+
 // Validation schema for book creation
 var bookSchema = v.Schema{
-	// "name": v.Rules(v.Min(1), v.Max(200)),
+	"name": v.Rules(v.Min(1), v.Max(200)),
 }
 
 // BookPageData holds data for the book pages
@@ -45,6 +47,9 @@ type BookFormValues struct {
 
 // Initialize the upload directory
 func init() {
+	if os.Getenv("SUPERKIT_ENV") == "development" {
+		uploadDir = "app/data/books"
+	}
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		panic(fmt.Sprintf("Failed to create upload directory: %v", err))
 	}

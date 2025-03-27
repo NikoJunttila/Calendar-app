@@ -1,11 +1,12 @@
 package calendar
 
 import (
-    "fmt"
-	"strconv"
+	"fmt"
 	v "github.com/anthdm/superkit/validate"
 	"gothstack/app/views/components"
 	"gothstack/app/views/layouts"
+	"strconv"
+	"time"
 )
 
 templ CalendarEntryCreate(data CalendarEntryPageData) {
@@ -15,8 +16,7 @@ templ CalendarEntryCreate(data CalendarEntryPageData) {
 			<h2 class="text-center text-2xl font-medium">
 				Create Entry for Calendar: { data.Calendar.Name }
 			</h2>
-
-			<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(data.Calendar.ID), 10)) }class="text-blue-600 hover:underline">← Back to Calendars</a>
+			<a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(data.Calendar.ID), 10)) } class="text-blue-600 hover:underline">← Back to Calendars</a>
 			@CalendarEntryForm(data.FormValues, data.FormErrors, data.Calendar, data.WorkResources, data.EntryID)
 		</div>
 	}
@@ -44,9 +44,8 @@ templ CalendarEntryForm(values CalendarEntryFormValues, errors v.Errors, calenda
 				<p class="text-center text-red-700">{ errors.Get("general")[0] }</p>
 			</div>
 		}
-		
 		<!-- Form URL changes based on whether it's for creation or editing -->
-		<form 
+		<form
 			if entryID == 0 {
 				hx-post={ string(templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entries/create")) }
 			} else {
@@ -56,36 +55,33 @@ templ CalendarEntryForm(values CalendarEntryFormValues, errors v.Errors, calenda
 		>
 			<div class="flex flex-col">
 				<label for="date" class="font-medium mb-1">Date</label>
-				<input { components.InputAttrs(errors.Has("date"))... }  type="date" name="date" id="date" value={ values.Date } />
+				<input { components.InputAttrs(errors.Has("date"))... } type="date" name="date" id="date" value={ values.Date }/>
 				if errors.Has("date") {
 					<div class="text-red-500 text-xs mt-1">{ errors.Get("date")[0] }</div>
 				}
 			</div>
-			
 			<div class="flex flex-col">
 				<label for="text" class="font-medium mb-1">Description</label>
-				<input { components.InputAttrs(errors.Has("text"))... } type="text" name="text" id="text" value={ values.Text } placeholder="Entry description" />
+				<input { components.InputAttrs(errors.Has("text"))... } type="text" name="text" id="text" value={ values.Text } placeholder="Entry description"/>
 				if errors.Has("text") {
 					<div class="text-red-500 text-xs mt-1">{ errors.Get("text")[0] }</div>
 				}
 			</div>
-			
 			if calendar.Work {
 				<div class="flex flex-col">
 					<label for="hours" class="font-medium mb-1">Hours</label>
-					<input { components.InputAttrs(errors.Has("hours"))... } type="number" name="hours" id="hours" step="0.01" value={ fmt.Sprintf("%.2f", values.Hours) } />
+					<input { components.InputAttrs(errors.Has("hours"))... } type="number" name="hours" id="hours" step="0.01" value={ fmt.Sprintf("%.2f", values.Hours) }/>
 					if errors.Has("hours") {
 						<div class="text-red-500 text-xs mt-1">{ errors.Get("hours")[0] }</div>
 					}
 				</div>
-				
 				<div class="flex flex-col">
 					<label for="resource" class="font-medium mb-1">Work Resource</label>
 					<select { components.InputAttrs(errors.Has("resource"))... } name="resource" id="resource">
 						<option value="">Select a resource</option>
 						for _, resource := range resources {
-							<option 
-								value={ strconv.FormatUint(uint64(resource.ID), 10) } 
+							<option
+								value={ strconv.FormatUint(uint64(resource.ID), 10) }
 								selected?={ resource.ID == values.WorkResourceID }
 							>
 								{ resource.Name }
@@ -97,15 +93,13 @@ templ CalendarEntryForm(values CalendarEntryFormValues, errors v.Errors, calenda
 					}
 				</div>
 			}
-			
 			<div class="flex justify-between mt-4">
-				<a 
-					href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10)) } 
+				<a
+					href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10)) }
 					class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-500"
 				>
 					Cancel
 				</a>
-				
 				<button { components.ButtonAttrs()... }>
 					if entryID == 0 {
 						Create Entry
@@ -114,10 +108,9 @@ templ CalendarEntryForm(values CalendarEntryFormValues, errors v.Errors, calenda
 					}
 				</button>
 			</div>
-			
 			if entryID > 0 {
 				<div class="mt-6 border-t pt-4">
-					<button 
+					<button
 						hx-delete={ string(templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entry/" + strconv.FormatUint(uint64(entryID), 10))) }
 						hx-confirm="Are you sure you want to delete this entry? This action cannot be undone."
 						class="w-full px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700"
@@ -127,11 +120,110 @@ templ CalendarEntryForm(values CalendarEntryFormValues, errors v.Errors, calenda
 				</div>
 			}
 		</form>
-		
 		if values.SuccessMessage != "" {
 			<div class="mt-4 p-4 bg-green-100 border border-green-300 rounded-md">
 				<p class="text-center text-green-700">{ values.SuccessMessage }</p>
 			</div>
 		}
+	</div>
+}
+
+// Updated templ components to remove unnecessary layout elements
+templ InlineEntryForm(formValues CalendarEntryFormValues, errors v.Errors, calendar Calendar, resources []WorkResource) {
+	<div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+		<div class="bg-white rounded-lg shadow-xl w-96 p-6 relative">
+			<button
+				type="button"
+				hx-get={ "/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/month?year=" + strconv.Itoa(time.Now().Year()) + "&month=" + strconv.Itoa(int(time.Now().Month())) }
+				hx-target="body"
+				class="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+				</svg>
+			</button>
+			<h2 class="text-lg font-semibold mb-4 text-black">Add New Entry for { formValues.Date }</h2>
+			<form
+				hx-post={ "/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entries/inline" }
+				hx-swap="innerHTML"
+				class="space-y-4 text-black"
+			>
+				<input type="hidden" name="date" value={ formValues.Date }/>
+				if errors != nil && len(errors) > 0 {
+					<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+						for _, errorMsgs := range errors {
+							for _, msg := range errorMsgs {
+								<p class="text-sm">{ msg }</p>
+							}
+						}
+					</div>
+				}
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Hours</label>
+					<input
+						type="number"
+						name="hours"
+						value={ fmt.Sprintf("%.2f", formValues.Hours) }
+						step="0.25"
+						min="0"
+						max="24"
+						required
+						class="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+					/>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Resource</label>
+					<select
+						name="resource"
+						required
+						class="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+					>
+						for _, resource := range resources {
+							<option
+								value={ strconv.FormatUint(uint64(resource.ID), 10) }
+								selected?={ resource.ID == formValues.WorkResourceID }
+							>
+								{ resource.Name }
+							</option>
+						}
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+					<textarea
+						name="text"
+						required
+						class="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500 h-24"
+					>{ formValues.Text }</textarea>
+				</div>
+				<div class="flex justify-end space-x-2">
+					<button
+						type="button"
+						hx-get={ "/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/month?year=" + strconv.Itoa(time.Now().Year()) + "&month=" + strconv.Itoa(int(time.Now().Month())) }
+						hx-target="body"
+						class="px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-md"
+					>
+						Cancel
+					</button>
+					<button
+						type="submit"
+						class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+					>
+						Save Entry
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+// Modified success handler to be more inline-friendly
+templ InlineEntrySuccess(entry CalendarEntry) {
+	<div
+		class="p-1 text-xs bg-green-100 text-black rounded border border-green-200 flex justify-between"
+		hx-swap-oob="true"
+	>
+		<span class="truncate">{ entry.Text }</span>
+		<span class="whitespace-nowrap">{ fmt.Sprintf("%.2fh", entry.Hours) }</span>
 	</div>
 }

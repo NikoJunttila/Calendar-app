@@ -37,5 +37,8 @@ func InitRoutes(router chi.Router, authConfig kit.AuthenticationConfig) {
 
 		// Delete a work resource
 		auth.Delete("/calendars/{id}/resources/{resource_id}", kit.Handler(HandleWorkResourceDelete))
+
+		auth.Get("/calendars/{id}/entries/inline", kit.Handler(HandleInlineCalendarEntryCreate))
+		auth.Post("/calendars/{id}/entries/inline", kit.Handler(HandleInlineCalendarEntryCreate))
 	})
 }

@@ -59,7 +59,7 @@ templ CalendarCreate(data CalendarPageData) {
 		@components.Navigation()
 		<div class="w-full justify-center gap-10">
 			<div class="mt-10 lg:mt-20">
-				<div class="max-w-md mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
+				<div class="max-w-md mx-auto border rounded-md shadow-sm py-12 mx-2 px-2 md:px-8 flex flex-col gap-8">
 					<h2 class="text-center text-2xl font-medium">Create Calendar</h2>
 					<p class="text-center">Create a new calendar to organize your entries.</p>
 					@CalendarForm(data.FormValues, data.FormErrors)
@@ -111,7 +111,7 @@ templ CalendarView(calendar Calendar, resources []WorkResource, totalResource in
 		@components.Navigation()
 		<div class="w-full justify-center gap-10">
 			<div class="mt-10 lg:mt-20">
-				<div class="max-w-4xl mx-auto border rounded-md shadow-sm py-12 px-8 flex flex-col gap-8">
+				<div class="max-w-4xl mx-auto border rounded-md shadow-sm py-12 mx-4 px-2 md:px-8 flex flex-col gap-8">
 					<h2 class="text-center text-2xl font-medium">Calendar: { calendar.Name }</h2>
 					
 					<div class="flex justify-center">
@@ -160,11 +160,10 @@ templ CalendarView(calendar Calendar, resources []WorkResource, totalResource in
 						if len(calendar.Entries) == 0 {
 							<p class="text-center text-gray-500">No entries found for this calendar for { time.Month(currentMonth).String() } { strconv.Itoa(currentYear) }.</p>
 						} else {
-							<table class="w-full border-collapse">
+                            <table class="w-full border-collapse overflow-x-auto block">
 								<thead>
 									<tr class="border-b">
 										<th class="text-left py-2 px-4">Date</th>
-										<th class="text-left py-2 px-4">Week</th>
 										<th class="text-right py-2 px-4">Hours</th>
 										<th class="text-right py-2 px-4">Text</th>
 										<th class="text-right py-2 px-4">Resource</th>
@@ -175,7 +174,6 @@ templ CalendarView(calendar Calendar, resources []WorkResource, totalResource in
 									for _, entry := range calendar.Entries {
 										<tr class="border-b">
 											<td class="py-2 px-4">{ entry.Date.Format("02.01.2006") }</td>
-											<td class="py-2 px-4">{ strconv.Itoa(entry.Week) }</td>
 											<td class="py-2 px-4 text-right">{ fmt.Sprintf("%.2f", entry.Hours) }</td>
 											<td class="py-2 px-4 text-right">{ entry.Text }</td>
 											<td class="py-2 px-4 text-right">{ entry.WorkResource.Name }</td>
@@ -283,7 +281,7 @@ templ CalendarViewMonthly(calendar Calendar, resources []WorkResource, totalReso
                                 <h3 class="font-medium mb-3">Resources for this calendar total: {fmt.Sprintf("%d%%", totalResource)}
                                     <a href={ templ.SafeURL("/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/resources") } class="text-blue-600 hover:underline ml-2">Resource list</a>
                                 </h3>
-                                <table class="w-full border-collapse">
+                                <table class="w-full border-collapse overflow-x-auto block">
                                     <thead>
                                         <tr class="border-b">
                                             <th class="text-left py-2 px-4">Resource</th>
@@ -350,7 +348,7 @@ templ CalendarViewMonthly(calendar Calendar, resources []WorkResource, totalReso
                             <p class="text-center text-gray-500">No entries found for this calendar for { time.Month(currentMonth).String() } { strconv.Itoa(currentYear) }.</p>
                         } else {
                             <h3 class="text-xl font-medium mb-4">All Entries List</h3>
-                            <table class="w-full border-collapse">
+                            <table class="w-full border-collapse overflow-x-auto block">
                                 <thead>
                                     <tr class="border-b">
                                         <th class="text-left py-2 px-4">Date</th>
@@ -500,14 +498,22 @@ func generateCalendarHTML(calendar Calendar, year int, month int, workStats Work
         html.WriteString(`</div>`)
         
         // Quick add entry link if not weekend or holiday
-        if !isWeekend && !isHoliday {
-            entryURL := "/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entries/create?date=" + date.Format("2006-01-02")
-            html.WriteString(`<a href="` + entryURL + `" class="absolute bottom-1 right-1 text-blue-600 hover:text-blue-800">`)
-            html.WriteString(`<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">`)
-            html.WriteString(`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />`)
-            html.WriteString(`</svg>`)
-            html.WriteString(`</a>`)
-        }
+    if !isWeekend && !isHoliday {
+        entryURL := "/calendars/" + strconv.FormatUint(uint64(calendar.ID), 10) + "/entries/inline"
+        html.WriteString(`
+            <div class="absolute bottom-1 right-1">
+                <button 
+                    hx-get="` + entryURL + `?date=` + date.Format("2006-01-02") + `" 
+                    hx-target="#inline-entry-form-` + strconv.Itoa(day) + `"
+                    hx-swap="innerHTML"
+                    class="text-blue-600 hover:text-blue-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                </button>
+                <div id="inline-entry-form-` + strconv.Itoa(day) + `"></div>
+            </div>`)
+    }
         
         html.WriteString(`</div>`)
     }
