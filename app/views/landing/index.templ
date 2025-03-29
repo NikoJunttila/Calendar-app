@@ -4,6 +4,14 @@ import (
 	"gothstack/app/views/layouts"
 )
 
+templ Test(title, description string){
+	<div>
+	<h1>hello {title}</h1>
+	<p>{description}</p>
+	</div>
+
+}
+
 templ Index() {
 	@layouts.App() {
 		<!-- Hero Section -->

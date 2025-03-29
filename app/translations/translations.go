@@ -1,29 +1,12 @@
-package app
+package translations
 
 import (
 	"context"
-	"gothstack/app/handlers"
-	"gothstack/app/views/errors"
-	"gothstack/app/views/landing"
-	"gothstack/plugins/auth"
-	"gothstack/plugins/book"
-	"gothstack/plugins/calendar"
-	"gothstack/plugins/helloworld"
-	"log/slog"
 	"net/http"
 	"strings"
-
-	"github.com/anthdm/superkit/kit"
-	"github.com/anthdm/superkit/kit/middleware"
-	"github.com/go-chi/chi/v5"
-
-	chimiddleware "github.com/go-chi/chi/v5/middleware"
 )
 
-type (
-	RequestKey         struct{}
-	ResponseHeadersKey struct{}
-)
+// Language represents a supported language
 type Language struct {
 	Code  string
 	Name  string
@@ -36,6 +19,7 @@ type Manager struct {
 	languages   map[string]Language
 }
 
+// NewManager creates a new language manager
 func NewManager() *Manager {
 	return &Manager{
 		defaultLang: "en",
@@ -77,6 +61,7 @@ func NewManager() *Manager {
 	}
 }
 
+// GetText retrieves text for a given key and language
 func (m *Manager) GetText(langCode, key string) string {
 	if lang, exists := m.languages[langCode]; exists {
 		if text, textExists := lang.Texts[key]; textExists {
@@ -87,7 +72,8 @@ func (m *Manager) GetText(langCode, key string) string {
 	return m.languages[m.defaultLang].Texts[key]
 }
 
-func (m *Manager) testMiddle(next http.Handler) http.Handler {
+// Middleware adds language to the context
+func (m *Manager) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Prioritize language selection:
 		// 1. URL parameter
@@ -141,72 +127,23 @@ func (m *Manager) testMiddle(next http.Handler) http.Handler {
 	})
 }
 
-// Define your global middleware
-func InitializeMiddleware(router *chi.Mux) {
-	router.Use(chimiddleware.Logger)
-	router.Use(chimiddleware.Recoverer)
-	router.Use(middleware.WithRequest)
-	router.Use(NewManager().testMiddle)
-}
-
-var LanguageManager *Manager
-
-// Define your routes in here
-func InitializeRoutes(router *chi.Mux) {
-	LanguageManager = NewManager()
-	// Authentication plugin
-	//
-	// By default the auth plugin is active, to disable the auth plugin
-	// you will need to pass your own handler in the `AuthFunc`` field
-	// of the `kit.AuthenticationConfig`.
-	authConfig := kit.AuthenticationConfig{
-		AuthFunc:    auth.AuthenticateUser,
-		RedirectURL: "/login",
-	}
-	auth.InitializeRoutes(router, authConfig)
-	helloworld.InitRoutes(router, authConfig)
-	calendar.InitRoutes(router, authConfig)
-	book.InitRoutes(router, authConfig)
-	// Routes that "might" have an authenticated user
-	router.Group(func(app chi.Router) {
-		app.Use(kit.WithAuthentication(authConfig, false)) // strict set to false
-		app.Get("/unauthorized", kit.Handler(handlers.HandleUnauthorized))
-		// Routes
-		app.Get("/", kit.Handler(handlers.HandleLandingIndex))
-		router.Get("/test", kit.Handler(func(k *kit.Kit) error {
-			// Retrieve language from context
-			langCode := k.Request.Context().Value("language").(string)
-			slog.Info("langCode", "lang", langCode)
-
-			// Directly use the language manager to get translations
-			return k.Render(landing.Test(
-				LanguageManager.GetText(langCode, "landing_title"),
-				LanguageManager.GetText(langCode, "landing_description"),
-			))
-		}))
-	})
-
-	// Authenticated routes
-	//
-	// Routes that "must" have an authenticated user or else they
-	// will be redirected to the configured redirectURL, set in the
-	// AuthenticationConfig.
-	router.Group(func(app chi.Router) {
-		app.Use(kit.WithAuthentication(authConfig, true)) // strict set to true
-
-		// Routes
-		// app.Get("/path", kit.Handler(myHandler.HandleIndex))
-	})
-}
-
-// NotFoundHandler that will be called when the requested path could
-// not be found.
-func NotFoundHandler(kit *kit.Kit) error {
-	return kit.Render(errors.Error404())
-}
-
-// ErrorHandler that will be called on errors return from application handlers.
-func ErrorHandler(kit *kit.Kit, err error) {
-	slog.Error("internal server error", "err", err.Error(), "path", kit.Request.URL.Path)
-	kit.Render(errors.Error500())
-}
+// // LanguageSelector creates a language selection dropdown
+// templ LanguageSelector(currentLang string, languages map[string]Language) {
+// 	<div class="language-selector">
+// 		<select
+// 			hx-get="/change-language"
+// 			hx-target="body"
+// 			hx-swap="unset"
+// 			name="lang"
+// 		>
+// 			for _, lang := range languages {
+// 				<option
+// 					value={ lang.Code }
+// 					selected?={ lang.Code == currentLang }
+// 				>
+// 					{ lang.Name }
+// 				</option>
+// 			}
+// 		</select>
+// 	</div>
+// }
