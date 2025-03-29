@@ -1,0 +1,12 @@
+{
+  "welcome": "Welcome",
+  "greeting": "Hello, world!",
+  "about": "About Us",
+  "landing_title": "Welcome to GothStack",
+  "landing_description": "A powerful Go web application framework",
+  "_language_name": "English",
+  "test_subtitle": "This is a more complex test component.",
+  "test_button_label": "Click Me!",
+  "test_action_message": "Button Clicked Successfully!",
+  "test_initial_message": "Waiting for button click..."
+}

@@ -1,17 +1,55 @@
 package landing
 
 import (
+	"context"
+	"gothstack/app/translations"
 	"gothstack/app/views/layouts"
 )
 
-templ Test(title, description string){
-	<div>
-	<h1>hello {title}</h1>
-	<p>{description}</p>
+templ Test(ctx context.Context, title, description string, languages map[string]translations.Language, currentLangCode string, currentPath string) {
+	@layouts.App() {
+	<div class="p-4 border rounded-lg shadow-md bg-gray-50 space-y-4">
+		<!-- Language Selector Dropdown -->
+		<div class="language-selector float-right">
+			<select
+				name="lang"
+				class="p-2 border rounded bg-white"
+				hx-get={ string(templ.URL(currentPath)) }
+				hx-trigger="change"
+				hx-target="body"
+				hx-swap="outerHTML"
+				hx-push-url="true"
+			>
+				for _, lang := range languages {
+					<option
+						value={ lang.Code }
+						selected?={ lang.Code == currentLangCode }
+					>
+						{ lang.Name }
+					</option>
+				}
+			</select>
+		</div>
+
+		<h1 class="text-2xl font-bold text-blue-700 pt-10">hello { title }</h1>
+		<h2 class="text-xl italic text-gray-600">{ translations.T(ctx, "test_subtitle") }</h2>
+		<p class="text-gray-800">{ description }</p>
+
+		<button
+			hx-post="/test-action"
+			hx-target="#test-result"
+			hx-swap="innerHTML"
+			class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+		>
+			{ translations.T(ctx, "test_button_label") }
+		</button>
+
+		<div id="test-result" class="mt-4 p-3 text-black border border-dashed border-gray-400 rounded bg-gray-100">
+			{ translations.T(ctx, "test_initial_message") }
+		</div>
 	</div>
-
 }
-
+}
 templ Index() {
 	@layouts.App() {
 		<!-- Hero Section -->
@@ -136,6 +174,7 @@ templ Index() {
 		</div>
 	}
 }
+
 templ FeaturesSection() {
 	<div id="features" class="container mx-auto px-4 md:px-6 py-16 md:py-24">
 		<div class="text-center mb-16">
@@ -248,4 +287,8 @@ templ FeaturesSection() {
 			});
 		});
 	</script>
+}
+
+templ TestActionResult(ctx context.Context) {
+	<span>{ translations.T(ctx, "test_action_message") }</span>
 }

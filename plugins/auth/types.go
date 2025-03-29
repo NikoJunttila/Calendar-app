@@ -73,8 +73,14 @@ type Session struct {
 	User      User
 }
 
-// using goose to init table
-/* func initialize() {
-	db.Get().AutoMigrate(&Session{}, &User{})
+// APIKey represents the api_keys table in the database
+type APIKey struct {
+	gorm.Model
+	UserID     uint           `gorm:"not null;index"` // Foreign key to users table
+	APIKey     string         `gorm:"unique;not null"`
+	Name       string         `gorm:"not null"`
+	Scopes     sql.NullString // Use sql.NullString for nullable TEXT fields
+	LastUsedAt sql.NullTime   // Use sql.NullTime for nullable DATETIME fields
+	ExpiresAt  sql.NullTime   // Use sql.NullTime for nullable DATETIME fields
+	User       User           `gorm:"foreignKey:UserID"` // Define the relationship to the User struct
 }
-*/

@@ -1,17 +1,15 @@
 package app
 
 import (
-	"context"
 	"gothstack/app/handlers"
+	"gothstack/app/translations"
 	"gothstack/app/views/errors"
-	"gothstack/app/views/landing"
 	"gothstack/plugins/auth"
 	"gothstack/plugins/book"
 	"gothstack/plugins/calendar"
 	"gothstack/plugins/helloworld"
+	"gothstack/plugins/reservations"
 	"log/slog"
-	"net/http"
-	"strings"
 
 	"github.com/anthdm/superkit/kit"
 	"github.com/anthdm/superkit/kit/middleware"
@@ -24,136 +22,21 @@ type (
 	RequestKey         struct{}
 	ResponseHeadersKey struct{}
 )
-type Language struct {
-	Code  string
-	Name  string
-	Texts map[string]string
-}
-
-// Manager handles language-related operations
-type Manager struct {
-	defaultLang string
-	languages   map[string]Language
-}
-
-func NewManager() *Manager {
-	return &Manager{
-		defaultLang: "en",
-		languages: map[string]Language{
-			"en": {
-				Code: "en",
-				Name: "English",
-				Texts: map[string]string{
-					"welcome":             "Welcome",
-					"greeting":            "Hello, world!",
-					"about":               "About Us",
-					"landing_title":       "Welcome to GothStack",
-					"landing_description": "A powerful Go web application framework",
-				},
-			},
-			"es": {
-				Code: "es",
-				Name: "Español",
-				Texts: map[string]string{
-					"welcome":             "Bienvenido",
-					"greeting":            "¡Hola, mundo!",
-					"about":               "Sobre Nosotros",
-					"landing_title":       "Bienvenido a GothStack",
-					"landing_description": "Un potente framework de aplicaciones web Go",
-				},
-			},
-			"fr": {
-				Code: "fr",
-				Name: "Français",
-				Texts: map[string]string{
-					"welcome":             "Bienvenue",
-					"greeting":            "Bonjour, monde!",
-					"about":               "À Propos",
-					"landing_title":       "Bienvenue sur GothStack",
-					"landing_description": "Un puissant framework d'applications web Go",
-				},
-			},
-		},
-	}
-}
-
-func (m *Manager) GetText(langCode, key string) string {
-	if lang, exists := m.languages[langCode]; exists {
-		if text, textExists := lang.Texts[key]; textExists {
-			return text
-		}
-	}
-	// Fallback to default language
-	return m.languages[m.defaultLang].Texts[key]
-}
-
-func (m *Manager) testMiddle(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Prioritize language selection:
-		// 1. URL parameter
-		// 2. Cookie
-		// 3. Accept-Language header
-		// 4. Default language
-
-		// Check URL parameter
-		langCode := r.URL.Query().Get("lang")
-
-		// If no URL parameter, check cookie
-		if langCode == "" {
-			cookie, err := r.Cookie("lang")
-			if err == nil {
-				langCode = cookie.Value
-			}
-		}
-
-		// If no cookie, check Accept-Language header
-		if langCode == "" {
-			acceptLang := r.Header.Get("Accept-Language")
-			if acceptLang != "" {
-				// Take the first language code
-				langCodes := strings.Split(acceptLang, ",")
-				if len(langCodes) > 0 {
-					// Extract language code (e.g., "en" from "en-US")
-					parts := strings.Split(langCodes[0], "-")
-					langCode = strings.ToLower(parts[0])
-				}
-			}
-		}
-
-		// Validate language code
-		if _, exists := m.languages[langCode]; !exists {
-			langCode = m.defaultLang
-		}
-
-		// Create context with language
-		ctx := context.WithValue(r.Context(), "language", langCode)
-
-		// Set language cookie for persistence
-		http.SetCookie(w, &http.Cookie{
-			Name:   "lang",
-			Value:  langCode,
-			Path:   "/",
-			MaxAge: 60 * 60 * 24 * 365, // 1 year
-		})
-
-		// Call next handler with modified context
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
 
 // Define your global middleware
 func InitializeMiddleware(router *chi.Mux) {
+	// Initialize the translations manager *before* using its middleware
+	translations.Init()
+
 	router.Use(chimiddleware.Logger)
 	router.Use(chimiddleware.Recoverer)
 	router.Use(middleware.WithRequest)
-	router.Use(NewManager().testMiddle)
+	// Now translations.M is guaranteed to be non-nil
+	router.Use(translations.M.Middleware)
 }
-
-var LanguageManager *Manager
 
 // Define your routes in here
 func InitializeRoutes(router *chi.Mux) {
-	LanguageManager = NewManager()
 	// Authentication plugin
 	//
 	// By default the auth plugin is active, to disable the auth plugin
@@ -167,23 +50,15 @@ func InitializeRoutes(router *chi.Mux) {
 	helloworld.InitRoutes(router, authConfig)
 	calendar.InitRoutes(router, authConfig)
 	book.InitRoutes(router, authConfig)
+	reservations.InitRoutes(router, authConfig)
 	// Routes that "might" have an authenticated user
 	router.Group(func(app chi.Router) {
 		app.Use(kit.WithAuthentication(authConfig, false)) // strict set to false
 		app.Get("/unauthorized", kit.Handler(handlers.HandleUnauthorized))
 		// Routes
 		app.Get("/", kit.Handler(handlers.HandleLandingIndex))
-		router.Get("/test", kit.Handler(func(k *kit.Kit) error {
-			// Retrieve language from context
-			langCode := k.Request.Context().Value("language").(string)
-			slog.Info("langCode", "lang", langCode)
-
-			// Directly use the language manager to get translations
-			return k.Render(landing.Test(
-				LanguageManager.GetText(langCode, "landing_title"),
-				LanguageManager.GetText(langCode, "landing_description"),
-			))
-		}))
+		app.Get("/test", kit.Handler(handlers.HandleTestIndex))
+		app.Post("/test-action", kit.Handler(handlers.HandleTestAction))
 	})
 
 	// Authenticated routes

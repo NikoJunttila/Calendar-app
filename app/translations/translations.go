@@ -2,9 +2,16 @@ package translations
 
 import (
 	"context"
+	"encoding/json"
+	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 )
+
+// Define a custom type for the context key to avoid collisions
+type ContextKey struct{} // Make it exported by capitalizing
 
 // Language represents a supported language
 type Language struct {
@@ -19,46 +26,89 @@ type Manager struct {
 	languages   map[string]Language
 }
 
-// NewManager creates a new language manager
-func NewManager() *Manager {
-	return &Manager{
-		defaultLang: "en",
-		languages: map[string]Language{
-			"en": {
-				Code: "en",
-				Name: "English",
-				Texts: map[string]string{
-					"welcome":             "Welcome",
-					"greeting":            "Hello, world!",
-					"about":               "About Us",
-					"landing_title":       "Welcome to GothStack",
-					"landing_description": "A powerful Go web application framework",
-				},
-			},
-			"es": {
-				Code: "es",
-				Name: "Español",
-				Texts: map[string]string{
-					"welcome":             "Bienvenido",
-					"greeting":            "¡Hola, mundo!",
-					"about":               "Sobre Nosotros",
-					"landing_title":       "Bienvenido a GothStack",
-					"landing_description": "Un potente framework de aplicaciones web Go",
-				},
-			},
-			"fr": {
-				Code: "fr",
-				Name: "Français",
-				Texts: map[string]string{
-					"welcome":             "Bienvenue",
-					"greeting":            "Bonjour, monde!",
-					"about":               "À Propos",
-					"landing_title":       "Bienvenue sur GothStack",
-					"landing_description": "Un puissant framework d'applications web Go",
-				},
-			},
-		},
+// M holds the singleton instance of the Manager
+var M *Manager
+
+// Init initializes the singleton language Manager.
+func Init() {
+	// Only initialize if it hasn't been already
+	if M == nil {
+		M = NewManager()
 	}
+}
+
+const localesDir = "app/translations/locales" // Directory containing translation files
+
+// NewManager creates a new language manager by loading translations from JSON files
+func NewManager() *Manager {
+	m := &Manager{
+		defaultLang: "en",
+		languages:   make(map[string]Language),
+	}
+
+	files, err := os.ReadDir(localesDir)
+	if err != nil {
+		log.Printf("Error reading locales directory '%s': %v. No translations loaded.", localesDir, err)
+		// Decide if you want to panic or continue with no translations
+		// For now, we'll continue, relying on the default language potentially (if it loads)
+		// or returning keys if GetText fails later.
+		return m // Return the partially initialized manager
+	}
+
+	for _, file := range files {
+		if file.IsDir() || !strings.HasSuffix(file.Name(), ".json") {
+			continue // Skip directories and non-JSON files
+		}
+
+		langCode := strings.TrimSuffix(file.Name(), ".json")
+		filePath := filepath.Join(localesDir, file.Name())
+
+		fileBytes, err := os.ReadFile(filePath)
+		if err != nil {
+			log.Printf("Error reading translation file '%s': %v", filePath, err)
+			continue // Skip this language
+		}
+
+		var texts map[string]string
+		err = json.Unmarshal(fileBytes, &texts)
+		if err != nil {
+			log.Printf("Error parsing JSON from file '%s': %v", filePath, err)
+			continue // Skip this language
+		}
+
+		// Extract language name from the JSON data, default to code if not found
+		langName, nameExists := texts["_language_name"]
+		if !nameExists {
+			log.Printf("Warning: '_language_name' key not found in '%s', using code '%s' as name.", filePath, langCode)
+			langName = langCode // Use the language code as the name as a fallback
+		}
+		delete(texts, "_language_name") // Remove the meta key from the actual translations
+
+		m.languages[langCode] = Language{
+			Code:  langCode,
+			Name:  langName,
+			Texts: texts,
+		}
+		log.Printf("Loaded language: %s (%s)", langName, langCode)
+	}
+
+	// Check if the default language was loaded successfully
+	if _, exists := m.languages[m.defaultLang]; !exists {
+		log.Printf("Warning: Default language '%s' not found in '%s'. Fallback might not work correctly.", m.defaultLang, localesDir)
+		// Add a minimal default language entry if it's missing, to prevent panics in GetText
+		if len(m.languages) == 0 { // Only if NO languages were loaded at all
+			log.Println("Warning: No languages loaded. Adding minimal English fallback.")
+			m.languages[m.defaultLang] = Language{
+				Code:  m.defaultLang,
+				Name:  "English (Default)",
+				Texts: map[string]string{"welcome": "Welcome"}, // Add at least one key
+			}
+		} else {
+			log.Printf("Warning: Default language '%s' not found. Check '%s.json'.", m.defaultLang, m.defaultLang)
+		}
+	}
+
+	return m
 }
 
 // GetText retrieves text for a given key and language
@@ -67,9 +117,18 @@ func (m *Manager) GetText(langCode, key string) string {
 		if text, textExists := lang.Texts[key]; textExists {
 			return text
 		}
+		// Optional: Log missing key for the specific language
+		// log.Printf("Warning: Translation key '%s' not found for language '%s'", key, langCode)
 	}
 	// Fallback to default language
-	return m.languages[m.defaultLang].Texts[key]
+	if defaultLang, defaultExists := m.languages[m.defaultLang]; defaultExists {
+		if text, textExists := defaultLang.Texts[key]; textExists {
+			return text
+		}
+	}
+	// Ultimate fallback: return the key itself if not found anywhere
+	log.Printf("Warning: Translation key '%s' not found for language '%s' or default '%s'", key, langCode, m.defaultLang)
+	return key
 }
 
 // Middleware adds language to the context
@@ -111,8 +170,8 @@ func (m *Manager) Middleware(next http.Handler) http.Handler {
 			langCode = m.defaultLang
 		}
 
-		// Create context with language
-		ctx := context.WithValue(r.Context(), "language", langCode)
+		// Create context with language using the custom key type
+		ctx := context.WithValue(r.Context(), ContextKey{}, langCode) // Use exported type
 
 		// Set language cookie for persistence
 		http.SetCookie(w, &http.Cookie{
@@ -125,6 +184,27 @@ func (m *Manager) Middleware(next http.Handler) http.Handler {
 		// Call next handler with modified context
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// T is a helper function to get translated text based on the context language.
+func T(ctx context.Context, key string) string {
+	// Default to default language if context/manager is missing
+	langCode := M.defaultLang
+	if ctx != nil {
+		// Retrieve the value using the custom key type
+		if langVal := ctx.Value(ContextKey{}); langVal != nil { // Use exported type
+			if code, ok := langVal.(string); ok {
+				langCode = code
+			}
+		}
+	}
+
+	if M == nil {
+		log.Println("Error: Translation Manager (M) is not initialized.")
+		return key // Fallback if manager isn't initialized
+	}
+
+	return M.GetText(langCode, key)
 }
 
 // // LanguageSelector creates a language selection dropdown
@@ -147,3 +227,14 @@ func (m *Manager) Middleware(next http.Handler) http.Handler {
 // 		</select>
 // 	</div>
 // }
+
+// GetLanguages returns the map of available languages.
+func (m *Manager) GetLanguages() map[string]Language {
+	// Return a copy to prevent external modification? For now, direct return is fine.
+	return m.languages
+}
+
+// DefaultLanguage returns the configured default language code.
+func (m *Manager) DefaultLanguage() string {
+	return m.defaultLang
+}
