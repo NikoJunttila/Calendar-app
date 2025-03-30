@@ -3,7 +3,7 @@ package reservations
 import (
 	"gothstack/app/views/components"
 	"gothstack/app/views/layouts"
-	//fmt"
+	"fmt"
 )
 
 templ ReservationsIndex(data ReservationsPageData) {
@@ -43,5 +43,84 @@ func bookingStatusColor(status string) string {
 		return "bg-green-50 border-green-200"
 	default:
 		return "bg-white border-gray-200"
+	}
+}
+
+templ SettingsForm(data SettingsFormData) {
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<main class="container mx-auto px-4 py-8 max-w-2xl">
+			<h1 class="text-3xl font-bold mb-6">Reservation Settings</h1>
+			// Display Success/Error Messages
+			if data.SuccessMessage != "" {
+				<div class="mb-4 p-3 rounded bg-green-100 text-green-800 border border-green-200">
+					{ data.SuccessMessage }
+				</div>
+			}
+			if data.ErrorMessage != "" {
+				<div class="mb-4 p-3 rounded bg-red-100 text-red-800 border border-red-200">
+					{ data.ErrorMessage }
+				</div>
+			}
+			<form method="POST" action="/reservations/settings" class="space-y-6 bg-white p-6 rounded-lg shadow">
+				// Timezone (Consider using a select with common timezones)
+				<div class="form-control">
+					<label for="timezone" class="label">
+						<span class="label-text">Timezone</span>
+					</label>
+					<input type="text" id="timezone" name="timezone" value={ data.Setting.Timezone } placeholder="e.g., UTC, America/New_York" class="input input-bordered w-full"/>
+					// Example Select (needs populating timezone list):
+					// <select id="timezone" name="timezone" class="select select-bordered w-full">
+					//   <option value="UTC" selected={data.Setting.Timezone == "UTC"}>UTC</option>
+					//   <option value="America/New_York" selected={data.Setting.Timezone == "America/New_York"}>America/New_York</option>
+					// </select>
+				</div>
+				// Notifications
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div class="form-control">
+						<label class="label cursor-pointer justify-start gap-2">
+							<input type="checkbox" id="notification_email" name="notification_email" class="checkbox checkbox-primary" checked?={ data.Setting.NotificationEmail }/>
+							<span class="label-text">Email Notifications</span>
+						</label>
+					</div>
+					<div class="form-control">
+						<label class="label cursor-pointer justify-start gap-2">
+							<input type="checkbox" id="notification_sms" name="notification_sms" class="checkbox checkbox-primary" checked?={ data.Setting.NotificationSMS }/>
+							<span class="label-text">SMS Notifications (if enabled)</span>
+						</label>
+					</div>
+				</div>
+				// Calendar View Preference
+				<div class="form-control">
+					<label for="calendar_view" class="label">
+						<span class="label-text">Default Calendar View</span>
+					</label>
+					<select id="calendar_view" name="calendar_view" class="select select-bordered w-full">
+						<option value="week" selected?={ data.Setting.CalendarView == "week" }>Week</option>
+						<option value="month" selected?={ data.Setting.CalendarView == "month" }>Month</option>
+						<option value="day" selected?={ data.Setting.CalendarView == "day" }>Day</option>
+					</select>
+				</div>
+				// Scheduling Notice/Advance
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div class="form-control">
+						<label for="min_scheduling_notice" class="label">
+							<span class="label-text">Minimum Scheduling Notice (hours)</span>
+						</label>
+						<input type="number" id="min_scheduling_notice" name="min_scheduling_notice" value={ fmt.Sprintf("%d", data.Setting.MinSchedulingNotice) } min="0" class="input input-bordered w-full"/>
+					</div>
+					<div class="form-control">
+						<label for="max_scheduling_advance" class="label">
+							<span class="label-text">Maximum Scheduling Advance (days)</span>
+						</label>
+						<input type="number" id="max_scheduling_advance" name="max_scheduling_advance" value={ fmt.Sprintf("%d", data.Setting.MaxSchedulingAdvance) } min="1" class="input input-bordered w-full"/>
+					</div>
+				</div>
+				// Submit Button
+				<div class="pt-4">
+					<button type="submit" class="btn btn-primary w-full md:w-auto">Save Settings</button>
+				</div>
+			</form>
+		</main>
 	}
 }

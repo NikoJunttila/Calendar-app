@@ -1,0 +1,285 @@
+package reservations
+
+import (
+	 "fmt"
+	"gothstack/app/views/components"
+	"gothstack/app/views/layouts"
+	_"strconv"
+)
+
+templ ServiceList(data ServicePageData) {
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<main class="container mx-auto px-4 py-8">
+			<div class="flex justify-between items-center mb-6">
+				<h1 class="text-3xl font-bold">Services</h1>
+				<a href="/reservations/services/create" class="btn btn-primary">Create New Service</a>
+			</div>
+			if len(data.Services) == 0 {
+				<p class="text-center text-gray-500 py-10">You haven't created any services yet.</p>
+			} else {
+				<div class="overflow-x-auto bg-white rounded-lg shadow">
+					<table class="table w-full">
+						<thead>
+							<tr>
+								<th>Name</th>
+								<th>Duration</th>
+								<th>Price</th>
+								<th>Active</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, service := range data.Services {
+								<tr class="hover">
+									<td>
+										<div class="flex items-center gap-3">
+											if service.Color.Valid && service.Color.String != "" {
+												<div class={ "w-3 h-3 rounded-full", "bg-"+service.Color.String+"-500" } title={ service.Color.String }></div>
+											} else {
+												<div class="w-3 h-3 rounded-full bg-gray-300"></div>
+											}
+											{ service.Name }
+										</div>
+									</td>
+									<td>{ fmt.Sprintf("%d min", service.Duration) }</td>
+                            		<td>
+										if service.Price.Valid {
+											{ fmt.Sprintf("$%.2f", service.Price.Float64) } // Format as currency
+										} else {
+											<span class="text-gray-400">N/A</span>
+										}
+									</td>
+									<td>
+										if service.IsActive {
+											<span class="badge badge-success badge-sm">Yes</span>
+										} else {
+											<span class="badge badge-ghost badge-sm">No</span>
+										}
+									</td>
+                                    <td>
+                                    <div class="flex gap-2">
+									<a href={ templ.URL(fmt.Sprintf("/reservations/services/%d/edit", service.ID)) } class="btn btn-xs btn-outline btn-info">Edit</a>
+                                    <button
+                                    class="btn btn-xs btn-outline btn-error"
+									hx-delete={ fmt.Sprintf("/reservations/services/%d", service.ID) }
+									hx-confirm={ fmt.Sprintf("Are you sure you want to delete the service '%s'?", service.Name) }
+								    hx-target="closest tr"
+									hx-swap="outerHTML swap:1s"
+                                    >
+                                    Delete
+                                    </button>
+                                    </div>
+                                    </td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+		</main>
+	}
+}
+
+templ ServiceCreateForm(data ServiceFormData) {
+
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<main class="container mx-auto px-4 py-8 max-w-3xl">
+			<div class="flex justify-between items-center mb-6">
+				<h1 class="text-3xl font-bold">Create New Service</h1>
+				<a href="/reservations/services" class="text-blue-600 hover:underline">← Back to Services</a>
+			</div>
+
+			// Display Success/Error Messages
+			if data.SuccessMessage != "" {
+				<div class="mb-4 p-3 rounded bg-green-100 text-green-800 border border-green-200">
+					{ data.SuccessMessage }
+				</div>
+			}
+			if data.ErrorMessage != "" {
+				<div class="mb-4 p-3 rounded bg-red-100 text-red-800 border border-red-200">
+					{ data.ErrorMessage }
+				</div>
+			}
+
+			<form method="POST" action="/reservations/services/create" class="space-y-6 bg-white p-6 rounded-lg shadow">
+				// Service Name (Required) - Use FormValues directly
+				<div class="form-control">
+					<label for="name" class="label"><span class="label-text">Service Name</span></label>
+					<input type="text" id="name" name="name" value={ data.FormValues.Name } required class={ "input input-bordered w-full"}/>
+				</div>
+
+				// Description - Use FormValues directly
+				<div class="form-control">
+					<label for="description" class="label"><span class="label-text">Description</span></label>
+					<textarea id="description" name="description" class="textarea textarea-bordered w-full h-24" placeholder="Optional details about the service...">{ data.FormValues.Description }</textarea>
+				</div>
+
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					// Duration (Required) - Use FormValues directly
+					<div class="form-control">
+						<label for="duration" class="label"><span class="label-text">Duration (minutes)</span></label>
+						<input type="number" id="duration" name="duration" value={ data.FormValues.Duration } required min="1" class={ "input input-bordered w-full"}/>
+					</div>
+
+					// Price - Use FormValues directly
+					<div class="form-control">
+						<label for="price" class="label"><span class="label-text">Price ($)</span></label>
+						<input type="number" step="0.01" id="price" name="price" value={ data.FormValues.Price } placeholder="e.g., 50.00 (Optional)" class="input input-bordered w-full"/>
+					</div>
+				</div>
+
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+					// Color - Use FormValues directly
+					<div class="form-control">
+						<label for="color" class="label"><span class="label-text">Color</span></label>
+						<input type="text" id="color" name="color" value={ data.FormValues.Color } placeholder="e.g., blue, #ff0000 (Optional)" class="input input-bordered w-full"/>
+					</div>
+
+					// Location - Use FormValues directly
+					<div class="form-control">
+						<label for="location" class="label"><span class="label-text">Location</span></label>
+						<input type="text" id="location" name="location" value={ data.FormValues.Location } placeholder="e.g., Office, Zoom Link (Optional)" class="input input-bordered w-full"/>
+					</div>
+
+					// Max Attendees - Use FormValues directly (default handled in handler)
+					<div class="form-control">
+						<label for="max_attendees" class="label"><span class="label-text">Max Attendees</span></label>
+						<input type="number" id="max_attendees" name="max_attendees" value={ data.FormValues.MaxAttendees } placeholder="1" required min="1" class="input input-bordered w-full"/>
+					</div>
+				</div>
+
+				// Buffers - Use FormValues directly
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div class="form-control">
+						<label for="buffer_before" class="label"><span class="label-text">Buffer Before (minutes)</span></label>
+						<input type="number" id="buffer_before" name="buffer_before" value={ data.FormValues.BufferBefore } placeholder="0" min="0" class="input input-bordered w-full"/>
+					</div>
+					<div class="form-control">
+						<label for="buffer_after" class="label"><span class="label-text">Buffer After (minutes)</span></label>
+						<input type="number" id="buffer_after" name="buffer_after" value={ data.FormValues.BufferAfter } placeholder="0" min="0" class="input input-bordered w-full"/>
+					</div>
+				</div>
+
+				// Is Active Checkbox - Use FormValues directly (default 'on' handled in handler)
+				<div class="form-control">
+					<label class="label cursor-pointer justify-start gap-2">
+						<input type="checkbox" id="is_active" name="is_active" class="checkbox checkbox-primary" checked?={ data.FormValues.IsActive == "on" || (data.FormValues.IsActive == "" && data.ErrorMessage == "" && len(data.FormErrors)==0) }/> // Checked if 'on' OR first load (no errors)
+						<span class="label-text">Service is Active (available for booking)</span>
+					</label>
+				</div>
+
+				// Submit Button
+				<div class="pt-4 flex justify-end">
+					<button type="submit" class="btn btn-primary">Create Service</button>
+				</div>
+			</form>
+		</main>
+	}
+}
+
+templ ServiceEditForm(data ServiceFormData) {
+	@layouts.BaseLayout() {
+		@components.Navigation()
+		<main class="container mx-auto px-4 py-8 max-w-3xl">
+			<div class="flex justify-between items-center mb-6">
+				<h1 class="text-3xl font-bold">Edit service</h1>
+				<a href="/reservations/services" class="text-blue-600 hover:underline">← Back to Services</a>
+			</div>
+
+			// Display Success/Error Messages
+			if data.SuccessMessage != "" {
+				<div class="mb-4 p-3 rounded bg-green-100 text-green-800 border border-green-200">
+					{ data.SuccessMessage }
+				</div>
+			}
+			if data.ErrorMessage != "" {
+				<div class="mb-4 p-3 rounded bg-red-100 text-red-800 border border-red-200">
+					{ data.ErrorMessage }
+				</div>
+			}
+
+			<form method="POST" action={ templ.URL(fmt.Sprintf("/reservations/services/%d/edit", data.id))} class="space-y-6 bg-white p-6 rounded-lg shadow">
+
+				// Service Name (Required)
+				<div class="form-control">
+					<label for="name" class="label"><span class="label-text">Service Name</span></label>
+					<input type="text" id="name" name="name" value={ data.FormValues.Name } required class={ "input input-bordered w-full"}/>
+				</div>
+
+				// Description
+				<div class="form-control">
+					<label for="description" class="label"><span class="label-text">Description</span></label>
+					<textarea id="description" name="description" class="textarea textarea-bordered w-full h-24" placeholder="Optional details about the service...">{ data.FormValues.Description }</textarea>
+				</div>
+
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					// Duration (Required)
+					<div class="form-control">
+						<label for="duration" class="label"><span class="label-text">Duration (minutes)</span></label>
+						<input type="number" id="duration" name="duration" value={ data.FormValues.Duration } required min="1" class={ "input input-bordered w-full"}/>
+					</div>
+
+					// Price
+					<div class="form-control">
+						<label for="price" class="label"><span class="label-text">Price ($)</span></label>
+						<input type="number" step="0.01" id="price" name="price" value={ data.FormValues.Price } placeholder="e.g., 50.00 (Optional)" class="input input-bordered w-full"/>
+					</div>
+				</div>
+
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+					// Color
+					<div class="form-control">
+						<label for="color" class="label"><span class="label-text">Color</span></label>
+						<input type="text" id="color" name="color" value={ data.FormValues.Color } placeholder="e.g., blue, #ff0000 (Optional)" class="input input-bordered w-full"/>
+					</div>
+
+					// Location
+					<div class="form-control">
+						<label for="location" class="label"><span class="label-text">Location</span></label>
+						<input type="text" id="location" name="location" value={ data.FormValues.Location } placeholder="e.g., Office, Zoom Link (Optional)" class="input input-bordered w-full"/>
+					</div>
+
+					// Max Attendees
+					<div class="form-control">
+						<label for="max_attendees" class="label"><span class="label-text">Max Attendees</span></label>
+						<input type="number" id="max_attendees" name="max_attendees" value={ data.FormValues.MaxAttendees } required min="1" class="input input-bordered w-full"/>
+					</div>
+				</div>
+
+				// Buffers
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div class="form-control">
+						<label for="buffer_before" class="label"><span class="label-text">Buffer Before (minutes)</span></label>
+						<input type="number" id="buffer_before" name="buffer_before" value={ data.FormValues.BufferBefore } placeholder="0" min="0" class="input input-bordered w-full"/>
+					</div>
+					<div class="form-control">
+						<label for="buffer_after" class="label"><span class="label-text">Buffer After (minutes)</span></label>
+						<input type="number" id="buffer_after" name="buffer_after" value={ data.FormValues.BufferAfter } placeholder="0" min="0" class="input input-bordered w-full"/>
+					</div>
+				</div>
+
+				// Is Active Checkbox
+				<div class="form-control">
+					<label class="label cursor-pointer justify-start gap-2">
+						<input type="checkbox" id="is_active" name="is_active" class="checkbox checkbox-primary" checked?={ data.FormValues.IsActive == "on" }/>
+						<span class="label-text">Service is Active (available for booking)</span>
+					</label>
+				</div>
+
+				// Submit Button
+				<div class="pt-4 flex justify-end">
+					<button type="submit" class="btn btn-primary">Save Changes</button>
+				</div>
+			</form>
+		</main>
+	}
+}
+
+
+/* templ ServiceEditForm(data ServiceFormData){
+<div>
+hello world {data.ErrorMessage}
+</div>
+} */

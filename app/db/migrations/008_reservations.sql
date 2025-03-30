@@ -19,7 +19,6 @@ CREATE INDEX idx_api_keys_user_id ON api_keys(user_id);
 
 -- Create an index on the email column for faster lookups
 CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_api_key ON users(api_key);
 
 -- Time slots table
 CREATE TABLE time_slots (

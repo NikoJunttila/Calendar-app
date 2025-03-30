@@ -7,12 +7,32 @@ import (
 
 // InitRoutes sets up the routes for the reservations plugin.
 func InitRoutes(router chi.Router, authConfig kit.AuthenticationConfig) {
+	// --- Public Customer-Facing Routes ---
+	router.Get("/book/{userID}", kit.Handler(HandleCustomerServiceList))
+	router.Get("/book/{userID}/service/{serviceID}", kit.Handler(HandleCustomerTimeSlotSelection))
+	// TODO: Add route for booking confirmation GET/POST, e.g.:
+	// router.Get("/book/{userID}/service/{serviceID}/confirm", kit.Handler(HandleBookingConfirmationView))
+	// router.Post("/book/{userID}/service/{serviceID}/confirm", kit.Handler(HandleBookingConfirmationPost))
+
+	// --- Authenticated Admin Routes ---
 	router.Group(func(auth chi.Router) {
 		// Apply authentication middleware - true means authentication is required
 		auth.Use(kit.WithAuthentication(authConfig, true))
 
 		// Route for the main reservations overview page
 		auth.Get("/reservations", kit.Handler(HandleReservationsIndex))
+
+		// --- Settings Routes ---
+		auth.Get("/reservations/settings", kit.Handler(HandleSettingsView))
+		auth.Post("/reservations/settings", kit.Handler(HandleSettingsUpdate))
+
+		// --- Service Routes ---
+		auth.Get("/reservations/services", kit.Handler(HandleServiceList))                       // List services
+		auth.Get("/reservations/services/create", kit.Handler(HandleServiceCreateView))          // Show create form
+		auth.Post("/reservations/services/create", kit.Handler(HandleServiceCreatePost))         // Handle create form submission
+		auth.Get("/reservations/services/{serviceID}/edit", kit.Handler(HandleServiceEditView))  // Show edit form
+		auth.Post("/reservations/services/{serviceID}/edit", kit.Handler(HandleServiceEditPost)) // Handle edit form submission
+		auth.Delete("/reservations/services/{serviceID}", kit.Handler(HandleServiceDelete))      // Handle deletion
 
 		// --- Placeholder Routes for Future Actions ---
 

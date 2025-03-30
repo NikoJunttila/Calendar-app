@@ -1,8 +1,10 @@
 package reservations
 
 import (
+	"database/sql" // Added for sql.NullInt64/NullString/NullFloat64
 	"fmt"
-	"gothstack/app/db" // Added for database access
+	"gothstack/app/db"       // Added for database access
+	"gothstack/plugins/auth" // Added for User relation
 	"time"
 
 	// Import your user type if it exists elsewhere, e.g.:
@@ -11,21 +13,54 @@ import (
 	//"gothstack/app/db" // Already added above
 )
 
+// --- Service ---
+
+// Service represents a bookable service offered by a user.
+type Service struct {
+	ID           uint            `gorm:"primaryKey"`
+	UserID       uint            `gorm:"column:user_id;not null;index"`
+	Name         string          `gorm:"column:name;type:text;not null"`
+	Description  sql.NullString  `gorm:"column:description;type:text"`    // Nullable TEXT
+	Duration     int             `gorm:"column:duration;not null"`        // Duration in minutes
+	Price        sql.NullFloat64 `gorm:"column:price;type:decimal(10,2)"` // Nullable DECIMAL
+	Color        sql.NullString  `gorm:"column:color;type:text"`          // Nullable TEXT
+	IsActive     bool            `gorm:"column:is_active;not null;default:1;index"`
+	BufferBefore int             `gorm:"column:buffer_before;default:0"` // In minutes
+	BufferAfter  int             `gorm:"column:buffer_after;default:0"`  // In minutes
+	MaxAttendees int             `gorm:"column:max_attendees;default:1"`
+	Location     sql.NullString  `gorm:"column:location;type:text"` // Nullable TEXT
+	CreatedAt    time.Time       `gorm:"column:created_at;not null;default:CURRENT_TIMESTAMP"`
+	UpdatedAt    time.Time       `gorm:"column:updated_at;not null;default:CURRENT_TIMESTAMP"`
+
+	// Define GORM relationships
+	User auth.User `gorm:"foreignKey:UserID"`
+	// Add relationships to TimeSlots and Bookings if needed (usually inverse)
+	// TimeSlots []TimeSlot `gorm:"foreignKey:ServiceID"`
+	// Bookings []Booking `gorm:"foreignKey:ServiceID"`
+}
+
+// TableName specifies the table name for GORM.
+func (Service) TableName() string {
+	return "services"
+}
+
 // --- TimeSlot ---
 
 // TimeSlot represents an available time slot for booking.
 type TimeSlot struct {
-	ID        uint      `gorm:"primaryKey"`
-	UserID    uint      `gorm:"column:user_id;not null;index;index:idx_time_slots_user_date"` // User who owns this slot
-	Date      string    `gorm:"column:date;type:text;not null;index"`                         // Format: YYYY-MM-DD
-	Time      string    `gorm:"column:time;type:text;not null"`                               // Format: HH:MM
-	Duration  int       `gorm:"column:duration;not null"`                                     // Duration in minutes
-	IsBooked  bool      `gorm:"column:is_booked;not null;default:0;index"`
-	CreatedAt time.Time `gorm:"column:created_at;not null;default:CURRENT_TIMESTAMP"`
-	UpdatedAt time.Time `gorm:"column:updated_at;not null;default:CURRENT_TIMESTAMP"`
+	ID        uint          `gorm:"primaryKey"`
+	UserID    uint          `gorm:"column:user_id;not null;index;index:idx_time_slots_user_date"` // User who owns this slot
+	ServiceID sql.NullInt64 `gorm:"column:service_id;index"`                                      // Added reference to Service (nullable)
+	Date      string        `gorm:"column:date;type:text;not null;index"`                         // Format: YYYY-MM-DD
+	Time      string        `gorm:"column:time;type:text;not null"`                               // Format: HH:MM
+	Duration  int           `gorm:"column:duration;not null"`                                     // Duration in minutes
+	IsBooked  bool          `gorm:"column:is_booked;not null;default:0;index"`
+	CreatedAt time.Time     `gorm:"column:created_at;not null;default:CURRENT_TIMESTAMP"`
+	UpdatedAt time.Time     `gorm:"column:updated_at;not null;default:CURRENT_TIMESTAMP"`
 
 	// Define GORM relationships (optional)
 	// User auth.User `gorm:"foreignKey:UserID"`
+	Service  Service   `gorm:"foreignKey:ServiceID"`  // Added Service relationship
 	Bookings []Booking `gorm:"foreignKey:TimeSlotID"` // A time slot can have one booking (or potentially more if logic allows?)
 }
 
@@ -47,21 +82,23 @@ const (
 
 // Booking represents a confirmed booking for a specific time slot.
 type Booking struct {
-	ID          uint      `gorm:"primaryKey"`
-	UserID      uint      `gorm:"column:user_id;not null;index"`      // User who owns the booked slot
-	TimeSlotID  uint      `gorm:"column:time_slot_id;not null;index"` // Link to the booked time slot
-	ClientName  string    `gorm:"column:client_name;type:text;not null"`
-	ClientEmail string    `gorm:"column:client_email;type:text;not null"`
-	ClientPhone string    `gorm:"column:client_phone;type:text"` // Nullable
-	BookingRef  string    `gorm:"column:booking_ref;type:text;not null;uniqueIndex"`
-	Notes       string    `gorm:"column:notes;type:text"` // Nullable
-	Status      string    `gorm:"column:status;type:text;not null;default:'confirmed';index"`
-	CreatedAt   time.Time `gorm:"column:created_at;not null;default:CURRENT_TIMESTAMP"`
-	UpdatedAt   time.Time `gorm:"column:updated_at;not null;default:CURRENT_TIMESTAMP"`
+	ID          uint          `gorm:"primaryKey"`
+	UserID      uint          `gorm:"column:user_id;not null;index"`      // User who owns the booked slot
+	TimeSlotID  uint          `gorm:"column:time_slot_id;not null;index"` // Link to the booked time slot
+	ServiceID   sql.NullInt64 `gorm:"column:service_id;index"`            // Added reference to Service (nullable)
+	ClientName  string        `gorm:"column:client_name;type:text;not null"`
+	ClientEmail string        `gorm:"column:client_email;type:text;not null"`
+	ClientPhone string        `gorm:"column:client_phone;type:text"` // Nullable
+	BookingRef  string        `gorm:"column:booking_ref;type:text;not null;uniqueIndex"`
+	Notes       string        `gorm:"column:notes;type:text"` // Nullable
+	Status      string        `gorm:"column:status;type:text;not null;default:'confirmed';index"`
+	CreatedAt   time.Time     `gorm:"column:created_at;not null;default:CURRENT_TIMESTAMP"`
+	UpdatedAt   time.Time     `gorm:"column:updated_at;not null;default:CURRENT_TIMESTAMP"`
 
 	// Define GORM relationships (optional)
 	// User     auth.User `gorm:"foreignKey:UserID"`
 	TimeSlot TimeSlot `gorm:"foreignKey:TimeSlotID"`
+	Service  Service  `gorm:"foreignKey:ServiceID"` // Added Service relationship
 }
 
 // TableName specifies the table name for GORM.
@@ -160,17 +197,14 @@ func (Webhook) TableName() string {
 // --- TimeSlot CRUD ---
 
 // CreateTimeSlot creates a new time slot.
-func CreateTimeSlot(userID uint, dateStr, timeStr string, duration int) (TimeSlot, error) {
+func CreateTimeSlot(userID uint, serviceID sql.NullInt64, dateStr, timeStr string, duration int) (TimeSlot, error) {
 	slot := TimeSlot{
-		UserID:   userID,
-		Date:     dateStr,
-		Time:     timeStr,
-		Duration: duration,
-		IsBooked: false, // Default to not booked
-		// CreatedAt and UpdatedAt are handled by GORM defaults if configured,
-		// otherwise set them explicitly:
-		// CreatedAt: time.Now(),
-		// UpdatedAt: time.Now(),
+		UserID:    userID,
+		ServiceID: serviceID, // Assign service ID
+		Date:      dateStr,
+		Time:      timeStr,
+		Duration:  duration,
+		IsBooked:  false,
 	}
 	result := db.Get().Create(&slot)
 	if result.Error != nil {
@@ -183,7 +217,7 @@ func CreateTimeSlot(userID uint, dateStr, timeStr string, duration int) (TimeSlo
 func GetTimeSlot(id uint) (TimeSlot, error) {
 	var slot TimeSlot
 	// Add UserID check if necessary for security: .Where("user_id = ?", userID)
-	result := db.Get().First(&slot, id)
+	result := db.Get().Preload("Service").First(&slot, id) // Preload Service
 	if result.Error != nil {
 		return slot, fmt.Errorf("failed to retrieve time slot %d: %w", id, result.Error)
 	}
@@ -193,7 +227,7 @@ func GetTimeSlot(id uint) (TimeSlot, error) {
 // ListTimeSlots retrieves all time slots for a specific user.
 func ListTimeSlots(userID uint) ([]TimeSlot, error) {
 	var slots []TimeSlot
-	result := db.Get().Where("user_id = ?", userID).Order("date asc, time asc").Find(&slots)
+	result := db.Get().Preload("Service").Where("user_id = ?", userID).Order("date asc, time asc").Find(&slots) // Preload Service
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to list time slots for user %d: %w", userID, result.Error)
 	}
@@ -208,6 +242,7 @@ func ListAvailableTimeSlots(userID uint, startDate, endDate time.Time) ([]TimeSl
 	endDateStr := endDate.Format("2006-01-02")
 
 	result := db.Get().
+		Preload("Service"). // Preload Service
 		Where("user_id = ? AND is_booked = ? AND date BETWEEN ? AND ?", userID, false, startDateStr, endDateStr).
 		Order("date asc, time asc").
 		Find(&slots)
@@ -241,10 +276,43 @@ func DeleteTimeSlot(id uint) error {
 	return nil
 }
 
+// ListAvailableTimeSlotsForService retrieves available (not booked) time slots
+// specifically for a given service within a date range, filtering out past times today.
+func ListAvailableTimeSlotsForService(userID uint, serviceID uint, startDate, endDate time.Time) ([]TimeSlot, error) {
+	var slots []TimeSlot
+	// Format dates for SQL query (YYYY-MM-DD)
+	startDateStr := startDate.Format("2006-01-02")
+	endDateStr := endDate.Format("2006-01-02")
+	// Format time for SQL query (HH:MM) - used only if start date is today
+	currentTimeStr := startDate.Format("15:04")
+	todayStr := startDate.Format("2006-01-02") // Use the passed start date for consistency
+
+	// Base query
+	query := db.Get().
+		// Avoid Preload("Service") as we query by serviceID already
+		Where("user_id = ? AND service_id = ? AND is_booked = ? AND date BETWEEN ? AND ?",
+			userID, serviceID, false, startDateStr, endDateStr).
+		Order("date asc, time asc")
+
+	// If the start date is today, add a condition to filter out past times
+	// Comparing date strings YYYY-MM-DD works.
+	// Comparing time strings HH:MM works.
+	if startDateStr == todayStr {
+		query = query.Where("time >= ?", currentTimeStr)
+	}
+
+	// Execute the query
+	result := query.Find(&slots)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to list available time slots for user %d, service %d: %w", userID, serviceID, result.Error)
+	}
+	return slots, nil
+}
+
 // --- Booking CRUD ---
 
 // CreateBooking creates a new booking and marks the associated time slot as booked.
-func CreateBooking(userID, timeSlotID uint, clientName, clientEmail, clientPhone, bookingRef, notes string) (Booking, error) {
+func CreateBooking(userID, timeSlotID uint, serviceID sql.NullInt64, clientName, clientEmail, clientPhone, bookingRef, notes string) (Booking, error) {
 	// Use a transaction to ensure atomicity
 	tx := db.Get().Begin()
 	if tx.Error != nil {
@@ -269,6 +337,7 @@ func CreateBooking(userID, timeSlotID uint, clientName, clientEmail, clientPhone
 	booking := Booking{
 		UserID:      userID,
 		TimeSlotID:  timeSlotID,
+		ServiceID:   serviceID, // Assign service ID
 		ClientName:  clientName,
 		ClientEmail: clientEmail,
 		ClientPhone: clientPhone, // Assumes empty string if not provided
@@ -304,7 +373,7 @@ func CreateBooking(userID, timeSlotID uint, clientName, clientEmail, clientPhone
 // GetBooking retrieves a booking by its ID, ensuring it belongs to the user.
 func GetBooking(id, userID uint) (Booking, error) {
 	var booking Booking
-	result := db.Get().Preload("TimeSlot").Where("id = ? AND user_id = ?", id, userID).First(&booking)
+	result := db.Get().Preload("TimeSlot").Preload("Service").Where("id = ? AND user_id = ?", id, userID).First(&booking) // Preload Service
 	if result.Error != nil {
 		return booking, fmt.Errorf("failed to retrieve booking %d for user %d: %w", id, userID, result.Error)
 	}
@@ -314,7 +383,7 @@ func GetBooking(id, userID uint) (Booking, error) {
 // GetBookingByRef retrieves a booking by its unique reference.
 func GetBookingByRef(bookingRef string) (Booking, error) {
 	var booking Booking
-	result := db.Get().Preload("TimeSlot").Where("booking_ref = ?", bookingRef).First(&booking)
+	result := db.Get().Preload("TimeSlot").Preload("Service").Where("booking_ref = ?", bookingRef).First(&booking) // Preload Service
 	if result.Error != nil {
 		return booking, fmt.Errorf("failed to retrieve booking with ref %s: %w", bookingRef, result.Error)
 	}
@@ -324,7 +393,7 @@ func GetBookingByRef(bookingRef string) (Booking, error) {
 // ListBookings retrieves all bookings for a specific user.
 func ListBookings(userID uint) ([]Booking, error) {
 	var bookings []Booking
-	result := db.Get().Preload("TimeSlot").Where("user_id = ?", userID).Order("created_at desc").Find(&bookings)
+	result := db.Get().Preload("TimeSlot").Preload("Service").Where("user_id = ?", userID).Order("created_at desc").Find(&bookings) // Preload Service
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to list bookings for user %d: %w", userID, result.Error)
 	}
@@ -667,3 +736,84 @@ func DeleteWebhook(id, userID uint) error {
 // Note: The APIKeys table and the additions to the Users table are not included here,
 // as they might belong in different plugin type files (e.g., auth plugin).
 // Adjust UserID types (uint) if your user ID is different.
+
+// --- Service CRUD ---
+
+// CreateService creates a new service for a user.
+// Note: Pass nullable fields using sql.NullString, sql.NullFloat64, etc.
+func CreateService(service Service) (Service, error) {
+	// Ensure UserID is set
+	if service.UserID == 0 {
+		return Service{}, fmt.Errorf("cannot create service without UserID")
+	}
+	// GORM handles CreatedAt/UpdatedAt defaults
+	result := db.Get().Create(&service)
+	if result.Error != nil {
+		return service, fmt.Errorf("failed to create service for user %d: %w", service.UserID, result.Error)
+	}
+	return service, nil
+}
+
+// GetService retrieves a specific service by ID, ensuring it belongs to the user.
+func GetService(id, userID uint) (Service, error) {
+	var service Service
+	result := db.Get().Where("id = ? AND user_id = ?", id, userID).First(&service)
+	if result.Error != nil {
+		return service, fmt.Errorf("failed to retrieve service %d for user %d: %w", id, userID, result.Error)
+	}
+	return service, nil
+}
+
+// ListServices retrieves all services for a specific user (optionally filter by active status).
+func ListServices(userID uint, activeOnly bool) ([]Service, error) {
+	var services []Service
+	query := db.Get().Where("user_id = ?", userID)
+	if activeOnly {
+		query = query.Where("is_active = ?", true)
+	}
+	result := query.Order("name asc").Find(&services)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to list services for user %d: %w", userID, result.Error)
+	}
+	return services, nil
+}
+
+// UpdateService updates an existing service.
+// Ensure the passed 'service' struct has the correct ID and UserID set.
+func UpdateService(service Service) (Service, error) {
+	if service.ID == 0 || service.UserID == 0 {
+		return Service{}, fmt.Errorf("cannot update service without ID and UserID")
+	}
+	// GORM automatically handles UpdatedAt if not explicitly set
+	service.UpdatedAt = time.Now()
+
+	// Use Save to update all fields, ensure caller provides the full object retrieved first.
+	// Or use Model().Where().Updates() to update specific fields.
+	result := db.Get().Save(&service) // Requires fetching the service first to have all fields
+	// Example using Updates:
+	// result := db.Get().Model(&Service{}).Where("id = ? AND user_id = ?", service.ID, service.UserID).Updates(service)
+
+	if result.Error != nil {
+		return service, fmt.Errorf("failed to update service %d for user %d: %w", service.ID, service.UserID, result.Error)
+	}
+	if result.RowsAffected == 0 {
+		// Could mean record not found or data was identical
+		// Re-fetch to confirm and return correct state
+		return GetService(service.ID, service.UserID)
+	}
+	return service, nil // Save returns the updated object if it runs Hooks, otherwise might need re-fetch
+}
+
+// DeleteService deletes a service by its ID, ensuring it belongs to the user.
+// Consider implications: associated TimeSlots/Bookings might need handling.
+func DeleteService(id, userID uint) error {
+	// Add checks here if needed: e.g., check if service is linked to future bookings.
+	result := db.Get().Where("id = ? AND user_id = ?", id, userID).Delete(&Service{})
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete service %d for user %d: %w", id, userID, result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("service %d not found for user %d or already deleted", id, userID)
+	}
+	return nil
+}
