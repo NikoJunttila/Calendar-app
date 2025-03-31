@@ -68,6 +68,48 @@ templ SpecialDateSettings(data SpecialDatePageData) {
 				</form>
 			</div>
 
+			<!-- Add date range form -->
+			<div class="mb-8 bg-white p-6 rounded-lg shadow-md">
+				<h2 class="text-xl font-semibold mb-4">Add Date Range</h2>
+				<form method="POST" action={ templ.URL("/reservations/special-dates/range") } class="space-y-4">
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-medium text-gray-700">Start Date</label>
+							<input type="date" 
+								name="start_date"
+								required
+								class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-gray-700">End Date</label>
+							<input type="date" 
+								name="end_date"
+								required
+								class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+						</div>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700">Description</label>
+						<input type="text" 
+							name="description"
+							required
+							placeholder="e.g., Summer Vacation, Office Closure"
+							class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+					</div>
+					<div class="flex items-center">
+						<input type="checkbox" 
+							name="is_working_day"
+							class="form-checkbox h-5 w-5 text-blue-600">
+						<label class="ml-2 text-sm font-medium text-gray-700">These are working days</label>
+					</div>
+					<div class="flex justify-end">
+						<button type="submit" class="btn btn-primary">
+							Add Date Range
+						</button>
+					</div>
+				</form>
+			</div>
+
 			<!-- List of existing special dates -->
 			<div class="bg-white p-6 rounded-lg shadow-md">
 				<h2 class="text-xl font-semibold mb-4">Existing Special Dates</h2>

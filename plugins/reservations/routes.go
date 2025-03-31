@@ -60,6 +60,7 @@ func InitRoutes(router chi.Router, authConfig kit.AuthenticationConfig) {
 		// Special dates routes
 		auth.Get("/reservations/special-dates", kit.Handler(HandleSpecialDateView))
 		auth.Post("/reservations/special-dates", kit.Handler(HandleSpecialDateCreate))
+		auth.Post("/reservations/special-dates/range", kit.Handler(HandleSpecialDateRangeCreate))
 		auth.Post("/reservations/special-dates/{id}/delete", kit.Handler(HandleSpecialDateDelete))
 	})
 }
