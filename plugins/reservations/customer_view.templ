@@ -5,6 +5,7 @@ import (
 	"database/sql" // Needed for sql.NullFloat64
 	"gothstack/app/views/components" // Import components
 	"gothstack/app/views/layouts"    // Import layouts
+	"time"
 )
 
 // --- Helper Functions ---
@@ -76,58 +77,151 @@ templ CustomerServiceList(data CustomerServiceListPageData) {
 	}
 }
 
-// CustomerTimeSlotSelection displays available time slots for a specific service.
-// It should also ideally be wrapped in a main layout component.
+// CustomerTimeSlotSelection displays available time slots for a specific service with improved styling.
 templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
 	@layouts.BaseLayout() {
 		@components.Navigation()
-		<main class="container mx-auto px-4 py-8">
-			<h1 class="text-3xl font-bold mb-6">Select an Available Time</h1>
+		<main class="container mx-auto px-4 py-8 max-w-6xl">
+			<div class="mb-6">
+				<h1 class="text-3xl font-bold text-gray-800">Select an Available Time</h1>
+				<p class="text-gray-600 mt-2">Choose from available slots for your appointment</p>
+			</div>
 
-			<div class="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50 shadow-sm">
-				<h2 class="text-xl font-semibold">Service: { data.Service.Name }</h2>
-				<div class="mt-2 text-sm text-gray-700 flex flex-wrap gap-x-4 gap-y-1">
-					<span>Duration: { formatDuration(data.Service.Duration) }</span>
-					<span>Price: { formatPrice(data.Service.Price) }</span>
-					if data.Service.Description.Valid {
-						<span>Details: { data.Service.Description.String }</span>
-					}
+			<!-- Service details card -->
+			<div class="mb-8 p-6 border border-gray-200 rounded-lg bg-white shadow-md transition-all hover:shadow-lg">
+				<h2 class="text-2xl font-semibold text-gray-800">{ data.Service.Name }</h2>
+				
+				<div class="mt-4 flex flex-wrap gap-4">
+					<div class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+						</svg>
+						<span>{ formatDuration(data.Service.Duration) }</span>
+					</div>
+					
+					<div class="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+						</svg>
+						<span>{ formatPrice(data.Service.Price) }</span>
+					</div>
+					
 					if data.Service.Location.Valid {
-						<span>Location: { data.Service.Location.String }</span>
+						<div class="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+							</svg>
+							<span>{ data.Service.Location.String }</span>
+						</div>
 					}
 				</div>
+				
+				if data.Service.Description.Valid {
+					<div class="mt-4 text-gray-700">
+						<p>{ data.Service.Description.String }</p>
+					</div>
+				}
 			</div>
 
 			if data.Error != "" {
-				<div class="mb-4 p-3 rounded bg-red-100 text-red-800 border border-red-200">
-					Error: { data.Error }
+				<div class="mb-6 p-4 rounded-lg bg-red-100 text-red-800 border-l-4 border-red-500">
+					<div class="flex items-center">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+							<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+						</svg>
+						<span>{ data.Error }</span>
+					</div>
 				</div>
-			} else if len(data.Slots) == 0 {
-				<p class="text-gray-600">No available time slots found for this service in the near future.</p>
 			} else {
-			    <h3 class="text-2xl font-semibold mb-4">Available Slots:</h3>
-    if len(data.Slots) > 0 {
-        <h4 class="font-semibold text-lg mt-5 mb-2">{ data.Slots[0].Date }</h4>
-		<div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
-		 for i, slot := range data.Slots {
-                if i > 0 && slot.Date != data.Slots[i-1].Date {
-                    <h4 class="font-semibold text-lg mt-5 mb-2">{ slot.Date }</h4>
-                }
-                <a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d/confirm?slotID=%d", data.UserID, data.Service.ID, slot.ID)) } class="btn btn-outline btn-primary btn-sm">
-                    { slot.Time }
-                </a>
-            }
-		</div>
-    }
+				<!-- Week navigation -->
+				<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+					<h3 class="text-2xl font-semibold text-gray-800 flex items-center">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+						</svg>
+						Week of { data.WeekStart.Format("January 2, 2006") }
+					</h3>
+					<div class="flex gap-3">
+						<a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d?week=%d", data.UserID, data.Service.ID, (data.CurrentWeek-1))) } 
+							class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+							</svg>
+							Previous Week
+						</a>
+						<a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d?week=%d", data.UserID, data.Service.ID, (data.CurrentWeek+1))) } 
+							class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+							Next Week
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+							</svg>
+						</a>
+					</div>
+				</div>
 
-
-
-
+				if len(data.Slots) == 0 {
+					<div class="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+						</svg>
+						<p class="text-gray-700 text-lg">No available time slots found for this week.</p>
+						<p class="mt-2 text-gray-500">Try selecting a different week or service.</p>
+					</div>
+				} else {
+					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+						for _, day := range data.Days {
+							<div class="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:translate-y-1 hover:shadow-lg">
+								<div style="padding: 0.75rem 1rem" class={ templ.KV("bg-blue-600 text-white", day.Date.Weekday() == time.Monday) }>
+									<h4 class="font-bold text-lg">{ day.Date.Format("Monday") }</h4>
+									<div class="text-sm opacity-90">{ day.Date.Format("January 2") }</div>
+								</div>
+								
+								<div class="p-4">
+									if len(day.DaySlots) == 0 {
+										<div class="flex items-center justify-center py-6 text-gray-500">
+											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+											</svg>
+											<span>No available slots</span>
+										</div>
+									} else {
+										<div class="grid grid-cols-2 gap-2">
+											for _, slot := range day.DaySlots {
+												<a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d/confirm?slotID=%d", data.UserID, data.Service.ID, slot.ID)) } 
+													class="inline-block text-center py-2 px-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-md border border-blue-200 transition-colors">
+													{ slot.Time }
+												</a>
+											}
+										</div>
+									}
+								</div>
+							</div>
+						}
+					</div>
+				}
 			}
 
-			<p class="mt-8">
-				<a href={ templ.URL(fmt.Sprintf("/book/%d", data.UserID)) } class="text-blue-600 hover:underline">&laquo; Back to Services</a>
-			</p>
+			<div class="mt-10 pt-6 border-t border-gray-200">
+				<a href={ templ.URL(fmt.Sprintf("/book/%d", data.UserID)) } 
+					class="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+					</svg>
+					Back to Services
+				</a>
+			</div>
 		</main>
 	}
+}
+
+// Helper function to filter slots for a specific date
+func filterSlotsForDate(slots []TimeSlot, date string) []TimeSlot {
+	var filtered []TimeSlot
+	for _, slot := range slots {
+		if slot.Date == date {
+			filtered = append(filtered, slot)
+		}
+	}
+	return filtered
 }

@@ -2,6 +2,7 @@ package reservations
 
 import (
 	"database/sql" // Added for sql.NullInt64/NullString/NullFloat64
+	"errors"
 	"fmt"
 	"gothstack/app/db"       // Added for database access
 	"gothstack/plugins/auth" // Added for User relation
@@ -276,37 +277,145 @@ func DeleteTimeSlot(id uint) error {
 	return nil
 }
 
-// ListAvailableTimeSlotsForService retrieves available (not booked) time slots
-// specifically for a given service within a date range, filtering out past times today.
-func ListAvailableTimeSlotsForService(userID uint, serviceID uint, startDate, endDate time.Time) ([]TimeSlot, error) {
+// GenerateTimeSlotsFromBusinessHours creates available time slots for a given date range
+// based on the user's business hours and service duration.
+func GenerateTimeSlotsFromBusinessHours(userID uint, serviceID uint, startDate, endDate time.Time, serviceDuration int) ([]TimeSlot, error) {
+	// 1. Get business hours for the user
+	businessHours, err := GetBusinessHours(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get business hours: %w", err)
+	}
+
+	// Create a map for easier access to business hours by day of week
+	businessHoursByDay := make(map[int]BusinessHour)
+	for _, bh := range businessHours {
+		businessHoursByDay[bh.DayOfWeek] = bh
+	}
+
+	// 2. Get special dates that might override business hours
+	specialDates, err := GetSpecialDates(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get special dates: %w", err)
+	}
+
+	// Create a map of special dates for easier lookup
+	specialDateMap := make(map[string]SpecialDate)
+	for _, sd := range specialDates {
+		specialDateMap[sd.Date] = sd
+	}
+
 	var slots []TimeSlot
-	// Format dates for SQL query (YYYY-MM-DD)
-	startDateStr := startDate.Format("2006-01-02")
-	endDateStr := endDate.Format("2006-01-02")
-	// Format time for SQL query (HH:MM) - used only if start date is today
-	currentTimeStr := startDate.Format("15:04")
-	todayStr := startDate.Format("2006-01-02") // Use the passed start date for consistency
+	currentDate := startDate
 
-	// Base query
-	query := db.Get().
-		// Avoid Preload("Service") as we query by serviceID already
-		Where("user_id = ? AND service_id = ? AND is_booked = ? AND date BETWEEN ? AND ?",
-			userID, serviceID, false, startDateStr, endDateStr).
-		Order("date asc, time asc")
+	// Iterate through each day in the date range
+	for !currentDate.After(endDate) {
+		dateStr := currentDate.Format("2006-01-02")
 
-	// If the start date is today, add a condition to filter out past times
-	// Comparing date strings YYYY-MM-DD works.
-	// Comparing time strings HH:MM works.
-	if startDateStr == todayStr {
-		query = query.Where("time >= ?", currentTimeStr)
+		// Check if it's a special date
+		if specialDate, exists := specialDateMap[dateStr]; exists {
+			if !specialDate.IsWorkingDay {
+				currentDate = currentDate.AddDate(0, 0, 1)
+				continue
+			}
+			// Could add special hours handling here if needed
+		}
+
+		// Get business hours for this day of week
+		dayOfWeek := int(currentDate.Weekday())
+		businessHour, exists := businessHoursByDay[dayOfWeek]
+		if !exists || !businessHour.IsWorkingDay {
+			currentDate = currentDate.AddDate(0, 0, 1)
+			continue
+		}
+
+		// Parse business hours
+		startTime, _ := time.Parse("15:04", businessHour.StartTime)
+		endTime, _ := time.Parse("15:04", businessHour.EndTime)
+
+		// Adjust times to current date
+		startDateTime := time.Date(
+			currentDate.Year(), currentDate.Month(), currentDate.Day(),
+			startTime.Hour(), startTime.Minute(), 0, 0, currentDate.Location(),
+		)
+		endDateTime := time.Date(
+			currentDate.Year(), currentDate.Month(), currentDate.Day(),
+			endTime.Hour(), endTime.Minute(), 0, 0, currentDate.Location(),
+		)
+
+		// Generate time slots for this day
+		currentSlot := startDateTime
+		for currentSlot.Add(time.Duration(serviceDuration)*time.Minute).Before(endDateTime) ||
+			currentSlot.Add(time.Duration(serviceDuration)*time.Minute).Equal(endDateTime) {
+
+			// Skip if this slot is in the past
+			if currentSlot.Before(time.Now()) {
+				currentSlot = currentSlot.Add(30 * time.Minute) // 30-minute intervals
+				continue
+			}
+
+			slots = append(slots, TimeSlot{
+				UserID:    userID,
+				ServiceID: sql.NullInt64{Int64: int64(serviceID), Valid: true},
+				Date:      dateStr,
+				Time:      currentSlot.Format("15:04"),
+				Duration:  serviceDuration,
+				IsBooked:  false,
+			})
+
+			currentSlot = currentSlot.Add(30 * time.Minute) // 30-minute intervals
+		}
+
+		currentDate = currentDate.AddDate(0, 0, 1)
 	}
 
-	// Execute the query
-	result := query.Find(&slots)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to list available time slots for user %d, service %d: %w", userID, serviceID, result.Error)
-	}
 	return slots, nil
+}
+
+// ListAvailableTimeSlotsForService retrieves available time slots for a service,
+// taking into account business hours and existing bookings.
+func ListAvailableTimeSlotsForService(userID uint, serviceID uint, startDate, endDate time.Time) ([]TimeSlot, error) {
+	// 1. Get the service to check duration
+	service, err := GetService(serviceID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get service details: %w", err)
+	}
+
+	// 2. Generate potential time slots based on business hours
+	slots, err := GenerateTimeSlotsFromBusinessHours(userID, serviceID, startDate, endDate, service.Duration)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate time slots: %w", err)
+	}
+
+	// 3. Get existing bookings to filter out unavailable slots
+	var existingSlots []TimeSlot
+	err = db.Get().
+		Where("user_id = ? AND date BETWEEN ? AND ? AND is_booked = ?",
+			userID,
+			startDate.Format("2006-01-02"),
+			endDate.Format("2006-01-02"),
+			true).
+		Find(&existingSlots).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to check existing bookings: %w", err)
+	}
+
+	// Create a map of booked slots for efficient lookup
+	bookedSlots := make(map[string]bool)
+	for _, slot := range existingSlots {
+		key := fmt.Sprintf("%s-%s", slot.Date, slot.Time)
+		bookedSlots[key] = true
+	}
+
+	// Filter out booked slots
+	var availableSlots []TimeSlot
+	for _, slot := range slots {
+		key := fmt.Sprintf("%s-%s", slot.Date, slot.Time)
+		if !bookedSlots[key] {
+			availableSlots = append(availableSlots, slot)
+		}
+	}
+
+	return availableSlots, nil
 }
 
 // --- Booking CRUD ---
@@ -525,9 +634,32 @@ func UpdateSettings(settings Setting) (Setting, error) {
 
 // --- BusinessHour CRUD ---
 
-// CreateBusinessHour creates a new business hour record.
 func CreateBusinessHour(userID uint, dayOfWeek int, startTime, endTime string, isWorking bool) (BusinessHour, error) {
-	bh := BusinessHour{
+	// First try to find an existing record
+	var existingBH BusinessHour
+	findResult := db.Get().Where("user_id = ? AND day_of_week = ?", userID, dayOfWeek).First(&existingBH)
+
+	// If record exists, update it
+	if findResult.Error == nil {
+		// Update existing record with new values
+		existingBH.StartTime = startTime
+		existingBH.EndTime = endTime
+		existingBH.IsWorkingDay = isWorking
+
+		updateResult := db.Get().Save(&existingBH)
+		if updateResult.Error != nil {
+			return existingBH, fmt.Errorf("failed to update business hour for user %d, day %d: %w", userID, dayOfWeek, updateResult.Error)
+		}
+		return existingBH, nil
+	}
+
+	// If record doesn't exist or another error occurred
+	if findResult.Error != nil && !errors.Is(findResult.Error, gorm.ErrRecordNotFound) {
+		return BusinessHour{}, fmt.Errorf("error checking for existing business hour for user %d, day %d: %w", userID, dayOfWeek, findResult.Error)
+	}
+
+	// Create new record
+	newBH := BusinessHour{
 		UserID:       userID,
 		DayOfWeek:    dayOfWeek,
 		StartTime:    startTime,
@@ -535,13 +667,13 @@ func CreateBusinessHour(userID uint, dayOfWeek int, startTime, endTime string, i
 		IsWorkingDay: isWorking,
 		// CreatedAt/UpdatedAt handled by GORM defaults
 	}
-	// Use FirstOrCreate or handle potential unique constraint violation (user_id, day_of_week)
-	result := db.Get().Where(BusinessHour{UserID: userID, DayOfWeek: dayOfWeek}).Assign(bh).FirstOrCreate(&bh)
-	// Or just Create and let it fail if exists: result := db.Get().Create(&bh)
-	if result.Error != nil {
-		return bh, fmt.Errorf("failed to create or find business hour for user %d, day %d: %w", userID, dayOfWeek, result.Error)
+
+	createResult := db.Get().Create(&newBH)
+	if createResult.Error != nil {
+		return newBH, fmt.Errorf("failed to create business hour for user %d, day %d: %w", userID, dayOfWeek, createResult.Error)
 	}
-	return bh, nil
+
+	return newBH, nil
 }
 
 // GetBusinessHours retrieves all business hours for a specific user.

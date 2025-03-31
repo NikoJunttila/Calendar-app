@@ -53,5 +53,13 @@ func InitRoutes(router chi.Router, authConfig kit.AuthenticationConfig) {
 		// auth.Get("/reservations/settings", kit.Handler(HandleSettingsView)) // Needs handler
 		// auth.Post("/reservations/settings", kit.Handler(HandleSettingsUpdate)) // Needs handler
 
+		// Business hours management
+		auth.Get("/reservations/business-hours", kit.Handler(HandleBusinessHoursView))
+		auth.Post("/reservations/business-hours", kit.Handler(HandleBusinessHoursUpdate))
+
+		// Special dates routes
+		auth.Get("/reservations/special-dates", kit.Handler(HandleSpecialDateView))
+		auth.Post("/reservations/special-dates", kit.Handler(HandleSpecialDateCreate))
+		auth.Post("/reservations/special-dates/{id}/delete", kit.Handler(HandleSpecialDateDelete))
 	})
 }

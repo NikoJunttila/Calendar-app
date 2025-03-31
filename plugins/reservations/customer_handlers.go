@@ -23,11 +23,19 @@ type CustomerServiceListPageData struct {
 
 // CustomerTimeSlotPageData holds data for the time slot selection page
 type CustomerTimeSlotPageData struct {
-	UserID   uint       // Owner of the service
-	UserName string     // Placeholder for User's public/business name
-	Service  Service    // Details of the selected service
-	Slots    []TimeSlot // Available time slots for the service
-	Error    string
+	UserID      uint       // Owner of the service
+	UserName    string     // Placeholder for User's public/business name
+	Service     Service    // Details of the selected service
+	Slots       []TimeSlot // Available time slots for the service
+	Error       string
+	WeekStart   time.Time // Start of the current week being displayed
+	WeekEnd     time.Time // End of the current week being displayed
+	CurrentWeek uint
+	Days        []struct {
+		Date     time.Time
+		DateStr  string
+		DaySlots []TimeSlot
+	}
 }
 
 // HandleCustomerServiceList displays the list of active services for a specific user (public view).
@@ -83,56 +91,99 @@ func HandleCustomerTimeSlotSelection(kit *kit.Kit) error {
 
 	if errUser != nil || errService != nil {
 		slog.Warn("Invalid user or service ID in time slot request", "userID", userIDStr, "serviceID", serviceIDStr, "errUser", errUser, "errService", errService)
-		// Redirect to a safe place, maybe home or a generic error page.
 		return kit.Redirect(http.StatusSeeOther, "/")
 	}
 
 	// 2. Fetch user details (Optional - Placeholder)
-	// TODO: Fetch user's public/business name
-	userName := fmt.Sprintf("Book appointment with User %d", userID) // Placeholder
+	userName := fmt.Sprintf("Book appointment with User %d", userID)
 
-	// 3. Fetch the selected service details (ensure it belongs to userID and is active)
+	// 3. Fetch the selected service details
 	service, err := GetService(uint(serviceID), uint(userID))
 	if err != nil {
 		slog.Error("Customer view: Failed to get service", "userID", userID, "serviceID", serviceID, "err", err)
-		// Redirect back to the service list for the user, as the service might not exist or belong to them.
 		return kit.Redirect(http.StatusSeeOther, fmt.Sprintf("/book/%d", userID))
 	}
 	if !service.IsActive {
 		slog.Warn("Customer view: Attempted to book inactive service", "userID", userID, "serviceID", serviceID)
-		// Service exists but isn't bookable. Redirect back to the list.
 		return kit.Redirect(http.StatusSeeOther, fmt.Sprintf("/book/%d", userID))
 	}
 
-	// 4. Fetch available time slots for this specific service
-	// Define a date range (e.g., today to X days in the future)
-	// Consider using user settings for MaxSchedulingAdvance later.
-	now := time.Now()
-	// Default lookahead: 60 days. Fetch from Settings if implemented.
-	lookaheadDays := 60
-	future := now.AddDate(0, 0, lookaheadDays)
-
-	slots, err := ListAvailableTimeSlotsForService(uint(userID), uint(serviceID), now, future)
+	// Get user's settings for scheduling advance notice
+	settings, err := GetSettings(uint(userID))
 	if err != nil {
-		slog.Error("Customer view: Failed to list available time slots", "userID", userID, "serviceID", serviceID, "err", err)
-		data := CustomerTimeSlotPageData{
-			UserID:   uint(userID),
-			UserName: userName,
-			Service:  service,
-			Error:    "Could not load available times for this service.",
+		slog.Warn("Failed to get user settings, using defaults",
+			"userID", userID,
+			"err", err)
+		settings = Setting{
+			MinSchedulingNotice:  24, // 24 hours
+			MaxSchedulingAdvance: 60, // 60 days
 		}
-		// Render the selection page with an error message.
-		return kit.Render(CustomerTimeSlotSelection(data)) // Defined in customer_view.templ
 	}
 
-	// 5. Prepare data for the template
+	// Calculate the week range
+	now := time.Now()
+	weekOffset := 0
+	if offsetStr := kit.Request.URL.Query().Get("week"); offsetStr != "" {
+		weekOffset, _ = strconv.Atoi(offsetStr)
+	}
+	// Calculate the start of the week (Monday) based on the offset
+	weekStart := now.AddDate(0, 0, settings.MinSchedulingNotice+weekOffset*7)
+	// Move to Monday (1) if current day is Sunday (0), otherwise move back to previous Monday
+	if weekStart.Weekday() == time.Sunday {
+		weekStart = weekStart.AddDate(0, 0, 1)
+	} else {
+		weekStart = weekStart.AddDate(0, 0, -int(weekStart.Weekday()-1))
+	}
+	weekEnd := weekStart.AddDate(0, 0, 6) // Move to Sunday
+
+	// Ensure we don't exceed the maximum scheduling advance
+	maxAdvanceDate := now.AddDate(0, 0, settings.MaxSchedulingAdvance)
+	if weekEnd.After(maxAdvanceDate) {
+		weekEnd = maxAdvanceDate
+	}
+
+	slots, err := ListAvailableTimeSlotsForService(uint(userID), uint(serviceID), weekStart, weekEnd)
+	if err != nil {
+		slog.Error("Customer view: Failed to list available time slots",
+			"userID", userID,
+			"serviceID", serviceID,
+			"err", err)
+		data := CustomerTimeSlotPageData{
+			UserID:      uint(userID),
+			UserName:    userName,
+			Service:     service,
+			CurrentWeek: uint(weekOffset),
+			Error:       "Could not load available times for this service.",
+		}
+		return kit.Render(CustomerTimeSlotSelection(data))
+	}
+
+	// Prepare data for the template
 	data := CustomerTimeSlotPageData{
-		UserID:   uint(userID),
-		UserName: userName,
-		Service:  service,
-		Slots:    slots,
+		UserID:      uint(userID),
+		UserName:    userName,
+		Service:     service,
+		Slots:       slots,
+		WeekStart:   weekStart,
+		WeekEnd:     weekEnd,
+		CurrentWeek: uint(weekOffset),
 	}
 
-	// 6. Render the time slot selection view template
-	return kit.Render(CustomerTimeSlotSelection(data)) // Defined in customer_view.templ
+	// Prepare days data
+	for i := 0; i < 7; i++ {
+		currentDate := weekStart.AddDate(0, 0, i)
+		dateStr := currentDate.Format("2006-01-02")
+		daySlots := filterSlotsForDate(slots, dateStr)
+		data.Days = append(data.Days, struct {
+			Date     time.Time
+			DateStr  string
+			DaySlots []TimeSlot
+		}{
+			Date:     currentDate,
+			DateStr:  dateStr,
+			DaySlots: daySlots,
+		})
+	}
+
+	return kit.Render(CustomerTimeSlotSelection(data))
 }
