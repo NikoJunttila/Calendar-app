@@ -1,6 +1,7 @@
 package reservations
 
 import (
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -23,15 +24,16 @@ type CustomerServiceListPageData struct {
 
 // CustomerTimeSlotPageData holds data for the time slot selection page
 type CustomerTimeSlotPageData struct {
-	UserID      uint       // Owner of the service
-	UserName    string     // Placeholder for User's public/business name
-	Service     Service    // Details of the selected service
-	Slots       []TimeSlot // Available time slots for the service
-	Error       string
-	WeekStart   time.Time // Start of the current week being displayed
-	WeekEnd     time.Time // End of the current week being displayed
-	CurrentWeek uint
-	Days        []struct {
+	UserID         uint       // Owner of the service
+	UserName       string     // Placeholder for User's public/business name
+	Service        Service    // Details of the selected service
+	Slots          []TimeSlot // Available time slots for the service
+	Error          string
+	WeekStart      time.Time // Start of the current week being displayed
+	WeekEnd        time.Time // End of the current week being displayed
+	CurrentWeek    uint
+	MaxAdvanceDate time.Time // Maximum date that can be booked
+	Days           []struct {
 		Date     time.Time
 		DateStr  string
 		DaySlots []TimeSlot
@@ -122,12 +124,13 @@ func HandleCustomerTimeSlotSelection(kit *kit.Kit) error {
 
 	// Calculate the week range
 	now := time.Now()
+	fmt.Println(now)
 	weekOffset := 0
 	if offsetStr := kit.Request.URL.Query().Get("week"); offsetStr != "" {
 		weekOffset, _ = strconv.Atoi(offsetStr)
 	}
 	// Calculate the start of the week (Monday) based on the offset
-	weekStart := now.AddDate(0, 0, settings.MinSchedulingNotice+weekOffset*7)
+	weekStart := now.AddDate(0, 0, weekOffset*7)
 	// Move to Monday (1) if current day is Sunday (0), otherwise move back to previous Monday
 	if weekStart.Weekday() == time.Sunday {
 		weekStart = weekStart.AddDate(0, 0, 1)
@@ -140,23 +143,6 @@ func HandleCustomerTimeSlotSelection(kit *kit.Kit) error {
 	maxAdvanceDate := now.AddDate(0, 0, settings.MaxSchedulingAdvance)
 	if weekEnd.After(maxAdvanceDate) {
 		weekEnd = maxAdvanceDate
-	}
-
-	// Get available slots
-	slots, err := ListAvailableTimeSlotsForService(uint(userID), uint(serviceID), weekStart, weekEnd)
-	if err != nil {
-		slog.Error("Customer view: Failed to list available time slots",
-			"userID", userID,
-			"serviceID", serviceID,
-			"err", err)
-		data := CustomerTimeSlotPageData{
-			UserID:      uint(userID),
-			UserName:    userName,
-			Service:     service,
-			CurrentWeek: uint(weekOffset),
-			Error:       "Could not load available times for this service.",
-		}
-		return kit.Render(CustomerTimeSlotSelection(data))
 	}
 
 	// Get booked slots for the week
@@ -211,9 +197,100 @@ func HandleCustomerTimeSlotSelection(kit *kit.Kit) error {
 			"duration", slot.Duration)
 	}
 
-	// Instead of using a simple map, check for time range overlaps
+	// Generate all possible time slots for the week
 	var allSlots []TimeSlot
-	for _, slot := range slots {
+	for day := 0; day < 7; day++ {
+		currentDate := weekStart.AddDate(0, 0, day)
+		dateStr := currentDate.Format("2006-01-02")
+
+		// Skip past dates
+		if currentDate.Before(time.Now().Truncate(24 * time.Hour)) {
+			slog.Debug("Skipping past date", "date", dateStr)
+			continue
+		}
+
+		// Get business hours for the user
+		businessHours, err := GetBusinessHours(uint(userID))
+		if err != nil {
+			slog.Error("Failed to get business hours",
+				"userID", userID,
+				"err", err)
+			// Continue with default hours if we can't get business hours
+			businessHours = []BusinessHour{}
+		}
+
+		// Create a map of business hours by day of week
+		businessHoursByDay := make(map[int]BusinessHour)
+		for _, bh := range businessHours {
+			businessHoursByDay[bh.DayOfWeek] = bh
+		}
+
+		// Get the business hours for this day of week
+		dayOfWeek := int(currentDate.Weekday())
+		businessHour, exists := businessHoursByDay[dayOfWeek]
+		if !exists || !businessHour.IsWorkingDay {
+			// Skip this day if it's not a working day
+			continue
+		}
+
+		// Parse business hours
+		startTime, err := time.Parse("15:04", businessHour.StartTime)
+		if err != nil {
+			slog.Error("Failed to parse start time",
+				"startTime", businessHour.StartTime,
+				"err", err)
+			continue
+		}
+		endTime, err := time.Parse("15:04", businessHour.EndTime)
+		if err != nil {
+			slog.Error("Failed to parse end time",
+				"endTime", businessHour.EndTime,
+				"err", err)
+			continue
+		}
+
+		// Calculate the minimum allowed time for this date
+		minAllowedTime := time.Now().Add(time.Duration(settings.MinSchedulingNotice) * time.Hour)
+
+		// Generate time slots for this day
+		for hour := startTime.Hour(); hour < endTime.Hour(); hour++ {
+			for minute := 0; minute < 60; minute += 30 {
+				// Skip if we're past the end time
+				if hour == endTime.Hour() && minute >= endTime.Minute() {
+					break
+				}
+
+				// Create the slot time
+				slotTime := time.Date(
+					currentDate.Year(), currentDate.Month(), currentDate.Day(),
+					hour, minute, 0, 0, time.Now().Location(),
+				)
+
+				// Skip if the slot is within the minimum notice period
+				if slotTime.Before(minAllowedTime) {
+					slog.Debug("Skipping slot within minimum notice period",
+						"date", dateStr,
+						"time", fmt.Sprintf("%02d:%02d", hour, minute),
+						"minAllowedTime", minAllowedTime.Format("2006-01-02 15:04"))
+					continue
+				}
+
+				timeStr := fmt.Sprintf("%02d:%02d", hour, minute)
+				slot := TimeSlot{
+					UserID:    uint(userID),
+					ServiceID: sql.NullInt64{Int64: int64(serviceID), Valid: true},
+					Date:      dateStr,
+					Time:      timeStr,
+					Duration:  service.Duration,
+				}
+				allSlots = append(allSlots, slot)
+			}
+		}
+	}
+
+	// Check each slot against booked time ranges
+	for i := range allSlots {
+		slot := &allSlots[i]
 		slotDateTime, err := time.Parse("2006-01-02 15:04", fmt.Sprintf("%s %s", slot.Date, slot.Time))
 		if err != nil {
 			slog.Error("Failed to parse slot datetime",
@@ -227,7 +304,6 @@ func HandleCustomerTimeSlotSelection(kit *kit.Kit) error {
 		serviceEndTime := slotDateTime.Add(time.Duration(service.Duration) * time.Minute)
 
 		// Check if this slot overlaps with any booked time ranges
-		isBooked := false
 		if ranges, exists := bookedTimeRanges[slot.Date]; exists {
 			for _, timeRange := range ranges {
 				// Check for overlap:
@@ -237,7 +313,7 @@ func HandleCustomerTimeSlotSelection(kit *kit.Kit) error {
 				if (slotDateTime.Before(timeRange.end) && serviceEndTime.After(timeRange.start)) ||
 					(slotDateTime.Equal(timeRange.start)) ||
 					(serviceEndTime.Equal(timeRange.end)) {
-					isBooked = true
+					slot.IsBooked = true
 					slog.Debug("Slot overlaps with booked time range",
 						"date", slot.Date,
 						"slotTime", slot.Time,
@@ -248,38 +324,46 @@ func HandleCustomerTimeSlotSelection(kit *kit.Kit) error {
 				}
 			}
 		}
-
-		slot.IsBooked = isBooked
-		allSlots = append(allSlots, slot)
 	}
 
 	slog.Debug("Time slots summary",
-		"totalSlots", len(slots),
+		"totalSlots", len(allSlots),
 		"bookedSlots", len(bookedSlots),
-		"availableSlots", len(allSlots),
 		"weekStart", weekStart.Format("2006-01-02"),
 		"weekEnd", weekEnd.Format("2006-01-02"))
 
-	// Log available slots per day for detailed debugging
-	slotsByDay := make(map[string]int)
+	// Log slots per day for detailed debugging
+	slotsByDay := make(map[string]struct {
+		total  int
+		booked int
+	})
 	for _, slot := range allSlots {
-		slotsByDay[slot.Date]++
+		dayStats := slotsByDay[slot.Date]
+		dayStats.total++
+		if slot.IsBooked {
+			dayStats.booked++
+		}
+		slotsByDay[slot.Date] = dayStats
 	}
-	for date, count := range slotsByDay {
-		slog.Debug("Available slots for day",
+
+	for date, stats := range slotsByDay {
+		slog.Debug("Slots for day",
 			"date", date,
-			"count", count)
+			"totalSlots", stats.total,
+			"bookedSlots", stats.booked,
+			"availableSlots", stats.total-stats.booked)
 	}
 
 	// Prepare data for the template
 	data := CustomerTimeSlotPageData{
-		UserID:      uint(userID),
-		UserName:    userName,
-		Service:     service,
-		Slots:       allSlots, // Use filtered slots
-		WeekStart:   weekStart,
-		WeekEnd:     weekEnd,
-		CurrentWeek: uint(weekOffset),
+		UserID:         uint(userID),
+		UserName:       userName,
+		Service:        service,
+		Slots:          allSlots, // Use filtered slots
+		WeekStart:      weekStart,
+		WeekEnd:        weekEnd,
+		CurrentWeek:    uint(weekOffset),
+		MaxAdvanceDate: maxAdvanceDate,
 	}
 
 	// Prepare days data
