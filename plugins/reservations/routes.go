@@ -10,6 +10,9 @@ func InitRoutes(router chi.Router, authConfig kit.AuthenticationConfig) {
 	// --- Public Customer-Facing Routes ---
 	router.Get("/book/{userID}", kit.Handler(HandleCustomerServiceList))
 	router.Get("/book/{userID}/service/{serviceID}", kit.Handler(HandleCustomerTimeSlotSelection))
+	router.Get("/book/{userID}/service/{serviceID}/confirm", kit.Handler(HandleBookingConfirmationView))
+	router.Post("/book/{userID}/service/{serviceID}/confirm", kit.Handler(HandleBookingConfirmationPost))
+	router.Get("/book/{userID}/service/{serviceID}/success", kit.Handler(HandleBookingSuccess))
 	// TODO: Add route for booking confirmation GET/POST, e.g.:
 	// router.Get("/book/{userID}/service/{serviceID}/confirm", kit.Handler(HandleBookingConfirmationView))
 	// router.Post("/book/{userID}/service/{serviceID}/confirm", kit.Handler(HandleBookingConfirmationPost))

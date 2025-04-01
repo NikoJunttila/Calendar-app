@@ -949,3 +949,33 @@ func DeleteService(id, userID uint) error {
 	}
 	return nil
 }
+
+// ListBookedTimeSlotsForWeek retrieves all booked time slots for a specific user within a week,
+// starting from the given date.
+func ListBookedTimeSlotsForWeek(userID uint, startDate time.Time) ([]TimeSlot, error) {
+	var slots []TimeSlot
+
+	// Calculate the end date (7 days from start)
+	endDate := startDate.AddDate(0, 0, 6)
+
+	// Format dates for query
+	startDateStr := startDate.Format("2006-01-02")
+	endDateStr := endDate.Format("2006-01-02")
+
+	// Query the database for booked slots
+	result := db.Get().
+		Where("user_id = ? AND is_booked = ? AND date BETWEEN ? AND ?",
+			userID,
+			true,
+			startDateStr,
+			endDateStr).
+		Order("date asc, time asc").
+		Find(&slots)
+
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to list booked time slots for user %d between %s and %s: %w",
+			userID, startDateStr, endDateStr, result.Error)
+	}
+
+	return slots, nil
+}

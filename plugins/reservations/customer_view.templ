@@ -188,10 +188,21 @@ templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
 									} else {
 										<div class="grid grid-cols-2 gap-2">
 											for _, slot := range day.DaySlots {
-												<a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d/confirm?slotID=%d", data.UserID, data.Service.ID, slot.ID)) } 
-													class="inline-block text-center py-2 px-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-md border border-blue-200 transition-colors">
-													{ slot.Time }
-												</a>
+												if slot.IsBooked {
+													<div class="inline-block text-center py-2 px-1 bg-gray-100 text-gray-400 font-medium rounded-md border border-gray-200 cursor-not-allowed">
+														{ slot.Time }
+														<span class="block text-xs text-gray-400">Booked</span>
+													</div>
+												} else {
+													<a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d/confirm?date=%s&time=%s", 
+														data.UserID, 
+														data.Service.ID, 
+														slot.Date,
+														slot.Time)) } 
+														class="inline-block text-center py-2 px-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-md border border-blue-200 transition-colors">
+														{ slot.Time }
+													</a>
+												}
 											}
 										</div>
 									}
