@@ -3,6 +3,7 @@ package reservations
 import (
 	"database/sql"
 	"fmt"
+	"gothstack/plugins/auth"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -10,8 +11,6 @@ import (
 
 	"github.com/anthdm/superkit/kit"
 	"github.com/go-chi/chi/v5"
-	// Assuming User model might be needed later for display names, etc.
-	// "gothstack/plugins/auth"
 )
 
 // CustomerServiceListPageData holds data for the customer service list page
@@ -382,4 +381,110 @@ func HandleCustomerTimeSlotSelection(kit *kit.Kit) error {
 		})
 	}
 	return kit.Render(CustomerTimeSlotSelection(data))
+}
+
+// HandleLandingPage displays the landing page for the reservations package
+func HandleLandingPage(kit *kit.Kit) error {
+	data := LandingPageData{
+		Features: []struct {
+			Title       string
+			Description string
+			Icon        string
+		}{
+			{
+				Title:       "Easy Availability Management",
+				Description: "Set your working hours, create service slots, and manage your availability with a few clicks.",
+				Icon:        "M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z",
+			},
+			{
+				Title:       "24/7 Booking",
+				Description: "Let your clients book appointments anytime, anywhere. Reduce manual scheduling and eliminate double bookings.",
+				Icon:        "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+			},
+			{
+				Title:       "Smart Notifications",
+				Description: "Automated reminders and notifications keep your clients informed and reduce no-shows.",
+				Icon:        "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9",
+			},
+		},
+	}
+	return kit.Render(LandingPage(data))
+}
+
+// HandleDashboard displays the main dashboard for managing reservation settings
+func HandleDashboard(kit *kit.Kit) error {
+	userID := kit.Auth().(auth.Auth).UserID
+	userEmail := kit.Auth().(auth.Auth).Email
+
+	// Get user's services
+	services, err := ListServices(userID, false) // false to get all services, not just active ones
+	if err != nil {
+		slog.Error("Failed to list services", "userID", userID, "err", err)
+		return kit.Render(DashboardPage(DashboardPageData{
+			UserID:   userID,
+			UserName: userEmail,
+			Error:    "Failed to load services",
+		}))
+	}
+
+	// Get user's bookings
+	bookings, err := ListBookings(userID)
+	if err != nil {
+		slog.Error("Failed to list bookings", "userID", userID, "err", err)
+		return kit.Render(DashboardPage(DashboardPageData{
+			UserID:   userID,
+			UserName: userEmail,
+			Error:    "Failed to load bookings",
+		}))
+	}
+
+	// Calculate stats
+	activeServices := 0
+	for _, service := range services {
+		if service.IsActive {
+			activeServices++
+		}
+	}
+
+	upcomingBookings := 0
+	now := time.Now()
+	for _, booking := range bookings {
+		// Parse the booking date and time
+		bookingDateTime, err := time.Parse("2006-01-02 15:04", fmt.Sprintf("%s %s", booking.TimeSlot.Date, booking.TimeSlot.Time))
+		if err != nil {
+			slog.Error("Failed to parse booking datetime", "bookingID", booking.ID, "err", err)
+			continue
+		}
+		if bookingDateTime.After(now) && booking.Status == "confirmed" {
+			upcomingBookings++
+		}
+	}
+
+	// Prepare data for the template
+	data := DashboardPageData{
+		UserID:   userID,
+		UserName: userEmail,
+		Stats: struct {
+			TotalServices    int
+			ActiveServices   int
+			TotalBookings    int
+			UpcomingBookings int
+		}{
+			TotalServices:    len(services),
+			ActiveServices:   activeServices,
+			TotalBookings:    len(bookings),
+			UpcomingBookings: upcomingBookings,
+		},
+		RecentBookings: bookings[:min(5, len(bookings))], // Show only the 5 most recent bookings
+	}
+
+	return kit.Render(DashboardPage(data))
+}
+
+// min returns the smaller of x or y
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
 }

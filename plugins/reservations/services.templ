@@ -10,71 +10,133 @@ import (
 templ ServiceList(data ServicePageData) {
 	@layouts.BaseLayout() {
 		@components.Navigation()
-		<main class="container mx-auto px-4 py-8">
-			<div class="flex justify-between items-center mb-6">
-				<h1 class="text-3xl font-bold">Services</h1>
-				<a href="/reservations/services/create" class="btn btn-primary">Create New Service</a>
+		<main class="container mx-auto px-4 py-8 max-w-6xl">
+			<div class="mb-8">
+				<div class="flex items-center gap-3 mb-4">
+					<a href="/dashboard" class="text-gray-600 hover:text-blue-600 transition-colors duration-200">
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+						</svg>
+					</a>
+					<h1 class="text-3xl font-bold text-gray-800">Services</h1>
+				</div>
+				<div class="flex flex-col sm:flex-row justify-between gap-4">
+					<p class="text-gray-600 max-w-xl">Manage your available services, including duration, pricing, and availability status.</p>
+					<div class="flex gap-3">
+						<a href="/dashboard" class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+							<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+							</svg>
+							Dashboard
+						</a>
+						<a href="/reservations/services/create" class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+							<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+							</svg>
+							Create New Service
+						</a>
+					</div>
+				</div>
 			</div>
+			
 			if len(data.Services) == 0 {
-				<p class="text-center text-gray-500 py-10">You haven't created any services yet.</p>
+				<div class="bg-white rounded-lg shadow-md p-12 text-center">
+					<svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+					</svg>
+					<p class="mt-4 text-lg text-gray-500">You haven't created any services yet.</p>
+					<a href="/reservations/services/create" class="mt-4 inline-flex items-center text-blue-600 hover:text-blue-800 font-medium">
+						Create your first service
+						<svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+						</svg>
+					</a>
+				</div>
 			} else {
-				<div class="overflow-x-auto bg-white rounded-lg shadow">
-					<table class="table w-full">
-						<thead>
-							<tr>
-								<th>Name</th>
-								<th>Duration</th>
-								<th>Price</th>
-								<th>Active</th>
-								<th>Actions</th>
-							</tr>
-						</thead>
-						<tbody>
-							for _, service := range data.Services {
-								<tr class="hover">
-									<td>
-										<div class="flex items-center gap-3">
-											if service.Color.Valid && service.Color.String != "" {
-												<div class={ "w-3 h-3 rounded-full", "bg-"+service.Color.String+"-500" } title={ service.Color.String }></div>
-											} else {
-												<div class="w-3 h-3 rounded-full bg-gray-300"></div>
-											}
-											{ service.Name }
-										</div>
-									</td>
-									<td>{ fmt.Sprintf("%d min", service.Duration) }</td>
-                            		<td>
-										if service.Price.Valid {
-											{ fmt.Sprintf("$%.2f", service.Price.Float64) } // Format as currency
-										} else {
-											<span class="text-gray-400">N/A</span>
-										}
-									</td>
-									<td>
-										if service.IsActive {
-											<span class="badge badge-success badge-sm">Yes</span>
-										} else {
-											<span class="badge badge-ghost badge-sm">No</span>
-										}
-									</td>
-                                    <td>
-                                    <div class="flex gap-2">
-									<a href={ templ.URL(fmt.Sprintf("/reservations/services/%d/edit", service.ID)) } class="btn btn-xs btn-outline btn-info">Edit</a>
-                                    <button
-                                    class="btn btn-xs btn-outline btn-error"
-									hx-delete={ fmt.Sprintf("/reservations/services/%d", service.ID) }
-									hx-confirm={ fmt.Sprintf("Are you sure you want to delete the service '%s'?", service.Name) }
-								    hx-target="closest tr"
-									hx-swap="outerHTML swap:1s"
-                                    >
-                                    Delete
-                                    </button>
-                                    </div>
-                                    </td>
+				<div class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+					<div class="overflow-x-auto">
+						<table class="min-w-full divide-y divide-gray-200">
+							<thead class="bg-gray-50">
+								<tr>
+									<th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+									<th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+									<th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+									<th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+									<th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
 								</tr>
-							}
-						</tbody>
-					</table>
+							</thead>
+							<tbody class="bg-white divide-y divide-gray-200">
+								for _, service := range data.Services {
+									<tr class="hover:bg-gray-50 transition-colors duration-150">
+										<td class="px-6 py-4 whitespace-nowrap">
+											<div class="flex items-center gap-3">
+												if service.Color.Valid && service.Color.String != "" {
+													<div class={ "w-4 h-4 rounded-full", "bg-"+service.Color.String+"-500" } title={ service.Color.String }></div>
+												} else {
+													<div class="w-4 h-4 rounded-full bg-gray-300"></div>
+												}
+												<span class="font-medium text-gray-900">{ service.Name }</span>
+											</div>
+										</td>
+										<td class="px-6 py-4 whitespace-nowrap text-gray-700">
+											<div class="flex items-center">
+												<svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+												</svg>
+												{ fmt.Sprintf("%d min", service.Duration) }
+											</div>
+										</td>
+										<td class="px-6 py-4 whitespace-nowrap text-gray-700">
+											if service.Price.Valid {
+												<div class="flex items-center">
+													<svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+													</svg>
+													{ fmt.Sprintf("$%.2f", service.Price.Float64) }
+												</div>
+											} else {
+												<span class="text-gray-400">N/A</span>
+											}
+										</td>
+										<td class="px-6 py-4 whitespace-nowrap">
+											if service.IsActive {
+												<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+													Active
+												</span>
+											} else {
+												<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+													Inactive
+												</span>
+											}
+										</td>
+										<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+											<div class="flex gap-2">
+												<a href={ templ.URL(fmt.Sprintf("/reservations/services/%d/edit", service.ID)) } 
+													class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+													<svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+													</svg>
+													Edit
+												</a>
+												<button
+													class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+													hx-delete={ fmt.Sprintf("/reservations/services/%d", service.ID) }
+													hx-confirm={ fmt.Sprintf("Are you sure you want to delete the service '%s'?", service.Name) }
+													hx-target="closest tr"
+													hx-swap="outerHTML swap:1s"
+												>
+													<svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+													</svg>
+													Delete
+												</button>
+											</div>
+										</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
 				</div>
 			}
 		</main>
@@ -87,7 +149,15 @@ templ ServiceCreateForm(data ServiceFormData) {
 		@components.Navigation()
 		<main class="container mx-auto px-4 py-8 max-w-3xl">
 			<div class="flex justify-between items-center mb-6">
+
+			<div class="flex items-center gap-4 mb-6">
+				<a href="/dashboard" class="text-gray-600 hover:text-gray-900">
+					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+					</svg>
+				</a>
 				<h1 class="text-3xl font-bold">Create New Service</h1>
+			</div>
 				<a href="/reservations/services" class="text-blue-600 hover:underline">← Back to Services</a>
 			</div>
 

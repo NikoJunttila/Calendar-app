@@ -1,8 +1,8 @@
 package reservations
 
 import (
-	"fmt"
 	"database/sql" // Needed for sql.NullFloat64
+	"fmt"
 	"gothstack/app/views/components" // Import components
 	"gothstack/app/views/layouts"    // Import layouts
 	"time"
@@ -43,35 +43,77 @@ func formatDuration(minutes int) string {
 templ CustomerServiceList(data CustomerServiceListPageData) {
 	@layouts.BaseLayout() {
 		@components.Navigation()
-		<main class="container mx-auto px-4 py-8">
-			<h1 class="text-3xl font-bold mb-6">Select a Service from { data.UserName }</h1>
-
+		<main class="container mx-auto px-4 py-8 max-w-4xl">
+			<div class="mb-8 border-b pb-4">
+				<h1 class="text-3xl font-bold text-gray-800">Services by <span class="text-indigo-600">{ data.UserName }</span></h1>
+				<p class="text-gray-500 mt-2">Select a service to proceed with booking</p>
+			</div>
+			
 			if data.Error != "" {
-				<div class="mb-4 p-3 rounded bg-red-100 text-red-800 border border-red-200">
+				<div class="mb-6 p-4 rounded-lg bg-red-50 text-red-700 border-l-4 border-red-500 flex items-center">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+						<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+					</svg>
 					Error: { data.Error }
 				</div>
 			} else if len(data.Services) == 0 {
-				<p class="text-gray-600">No services are currently available for booking.</p>
+				<div class="bg-gray-50 rounded-lg p-8 text-center border border-gray-200">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+					</svg>
+					<p class="text-gray-600 mt-4 text-lg">No services are currently available for booking.</p>
+				</div>
 			} else {
-				<ul class="space-y-4">
+				<div class="grid gap-6 md:grid-cols-2">
 					for _, service := range data.Services {
-						<li class="bg-white border border-gray-200 p-4 rounded-lg shadow hover:shadow-md transition-shadow duration-200">
-							<a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d", data.UserID, service.ID)) } class="text-blue-600 hover:underline">
-								<h2 class="text-xl font-semibold">{ service.Name }</h2>
-							</a>
-							if service.Description.Valid {
-								<p class="text-gray-700 mt-1">{ service.Description.String }</p>
-							}
-							<div class="mt-2 text-sm text-gray-600 flex flex-wrap gap-x-4 gap-y-1">
-								<span>Duration: { formatDuration(service.Duration) }</span>
-								<span>Price: { formatPrice(service.Price) }</span>
-								if service.Location.Valid {
-									<span>Location: { service.Location.String }</span>
+						<div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col h-full">
+							<div class="p-5 flex-grow">
+								<a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d", data.UserID, service.ID)) } class="group">
+									<h2 class="text-xl font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors duration-200">
+										{ service.Name }
+									</h2>
+								</a>
+								
+								if service.Description.Valid {
+									<p class="text-gray-600 mt-2 text-sm">{ service.Description.String }</p>
 								}
+								
+								<div class="mt-4 grid grid-cols-2 gap-2">
+									<div class="flex items-center text-sm text-gray-500">
+										<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										<span>{ formatDuration(service.Duration) }</span>
+									</div>
+									
+									<div class="flex items-center text-sm text-gray-500">
+										<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										<span>{ formatPrice(service.Price) }</span>
+									</div>
+									
+									if service.Location.Valid {
+										<div class="flex items-center text-sm text-gray-500 col-span-2 mt-1">
+											<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+											</svg>
+											<span>{ service.Location.String }</span>
+										</div>
+									}
+								</div>
 							</div>
-						</li>
+							
+							<div class="mt-2 p-3 bg-gray-50 border-t border-gray-100">
+								<a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d", data.UserID, service.ID)) } 
+								   class="w-full block text-center py-2 px-4 bg-indigo-600 text-white rounded font-medium hover:bg-indigo-700 transition-colors duration-200">
+									Book Now
+								</a>
+							</div>
+						</div>
 					}
-				</ul>
+				</div>
 			}
 		</main>
 	}
@@ -83,91 +125,109 @@ templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
 		@components.Navigation()
 		<main class="container mx-auto px-4 py-8 max-w-6xl">
 			<div class="mb-6">
+			<div class="flex items-center gap-4">
 				<h1 class="text-3xl font-bold text-gray-800">Select an Available Time</h1>
+				<a
+					href={ templ.URL(fmt.Sprintf("/book/%d", data.UserID)) }
+					class="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+					</svg>
+					Back to Services
+				</a>
+			</div>
 				<p class="text-gray-600 mt-2">Choose from available slots for your appointment</p>
 			</div>
-
 			<!-- Service details card -->
 			<div class="mb-8 p-6 border border-gray-200 rounded-lg bg-white shadow-md transition-all hover:shadow-lg">
 				<h2 class="text-2xl font-semibold text-gray-800">{ data.Service.Name }</h2>
-				
 				<div class="mt-4 flex flex-wrap gap-4">
 					<div class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800">
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 						</svg>
 						<span>{ formatDuration(data.Service.Duration) }</span>
 					</div>
-					
 					<div class="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800">
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 						</svg>
 						<span>{ formatPrice(data.Service.Price) }</span>
 					</div>
-					
 					if data.Service.Location.Valid {
 						<div class="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800">
 							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
 							</svg>
 							<span>{ data.Service.Location.String }</span>
 						</div>
 					}
 				</div>
-				
 				if data.Service.Description.Valid {
 					<div class="mt-4 text-gray-700">
 						<p>{ data.Service.Description.String }</p>
 					</div>
 				}
 			</div>
-
 			if data.Error != "" {
 				<div class="mb-6 p-4 rounded-lg bg-red-100 text-red-800 border-l-4 border-red-500">
 					<div class="flex items-center">
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-							<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+							<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
 						</svg>
 						<span>{ data.Error }</span>
 					</div>
 				</div>
 			} else {
 				<!-- Week navigation -->
-				<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
-					<h3 class="text-2xl font-semibold text-gray-800 flex items-center">
-						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-						</svg>
-						Week of { data.WeekStart.Format("January 2, 2006") }
+				<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+					<h3 class="text-2xl font-semibold text-gray-800 flex items-center group">
+						<span class="inline-flex items-center justify-center p-2 bg-blue-50 text-blue-600 rounded-full mr-3 group-hover:bg-blue-100 transition-colors duration-200">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+							</svg>
+						</span>
+						<span>Week of <span class="text-blue-600 font-bold">{ data.WeekStart.Format("January 2, 2006") }</span></span>
 					</h3>
-					<div class="flex gap-3">
-						<a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d?week=%d", data.UserID, data.Service.ID, (data.CurrentWeek-1))) } 
-							class={ templ.KV("pointer-events-none", data.CurrentWeek <= 0) }>
-							<div class={ templ.KV("bg-gray-100 text-gray-400 cursor-not-allowed", data.CurrentWeek <= 0) } class={ templ.KV("bg-white text-gray-700 hover:bg-gray-50", data.CurrentWeek > 0) } class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-								<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+					<div class="flex gap-2">
+						<a
+							href={ templ.URL(fmt.Sprintf("/book/%d/service/%d?week=%d", data.UserID, data.Service.ID, (data.CurrentWeek - 1))) }
+							class={ templ.KV("pointer-events-none opacity-60", data.CurrentWeek <= 0) }
+						>
+							<div
+								class={ "inline-flex items-center px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
+                templ.KV("text-gray-400 bg-gray-100 border border-gray-200", data.CurrentWeek <= 0),
+                templ.KV("text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400 shadow-sm", data.CurrentWeek > 0) }
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
 								</svg>
 								Previous Week
 							</div>
 						</a>
-						<a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d?week=%d", data.UserID, data.Service.ID, (data.CurrentWeek+1))) } 
-							class={ templ.KV("pointer-events-none", data.WeekEnd.Equal(data.MaxAdvanceDate)) }>
-							<div class={ templ.KV("bg-gray-100 text-gray-400 cursor-not-allowed", data.WeekEnd.Equal(data.MaxAdvanceDate)) } class={ templ.KV("bg-white text-gray-700 hover:bg-gray-50", !data.WeekEnd.Equal(data.MaxAdvanceDate)) } class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+						<a
+							href={ templ.URL(fmt.Sprintf("/book/%d/service/%d?week=%d", data.UserID, data.Service.ID, (data.CurrentWeek + 1))) }
+							class={ templ.KV("pointer-events-none opacity-60", data.WeekEnd.Equal(data.MaxAdvanceDate)) }
+						>
+							<div
+								class={ "inline-flex items-center px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
+                templ.KV("text-gray-400 bg-gray-100 border border-gray-200", data.WeekEnd.Equal(data.MaxAdvanceDate)),
+                templ.KV("text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400 shadow-sm", !data.WeekEnd.Equal(data.MaxAdvanceDate)) }
+							>
 								Next Week
-								<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
 								</svg>
 							</div>
 						</a>
 					</div>
 				</div>
-
 				if len(data.Slots) == 0 {
 					<div class="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 						</svg>
 						<p class="text-gray-700 text-lg">No available time slots found for this week.</p>
 						<p class="mt-2 text-gray-500">Try selecting a different week or service.</p>
@@ -180,12 +240,11 @@ templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
 									<h4 class="font-bold text-lg">{ day.Date.Format("Monday") }</h4>
 									<div class="text-sm opacity-90">{ day.Date.Format("January 2") }</div>
 								</div>
-								
 								<div class="p-4">
 									if len(day.DaySlots) == 0 {
 										<div class="flex items-center justify-center py-6 text-gray-500">
 											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 											</svg>
 											<span>No available slots</span>
 										</div>
@@ -198,12 +257,14 @@ templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
 														<span class="block text-xs text-gray-400">Booked</span>
 													</div>
 												} else {
-													<a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d/confirm?date=%s&time=%s", 
+													<a
+														href={ templ.URL(fmt.Sprintf("/book/%d/service/%d/confirm?date=%s&time=%s", 
 														data.UserID, 
 														data.Service.ID, 
 														slot.Date,
-														slot.Time)) } 
-														class="inline-block text-center py-2 px-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-md border border-blue-200 transition-colors">
+														slot.Time)) }
+														class="inline-block text-center py-2 px-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-md border border-blue-200 transition-colors"
+													>
 														{ slot.Time }
 													</a>
 												}
@@ -216,12 +277,13 @@ templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
 					</div>
 				}
 			}
-
 			<div class="mt-10 pt-6 border-t border-gray-200">
-				<a href={ templ.URL(fmt.Sprintf("/book/%d", data.UserID)) } 
-					class="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors">
+				<a
+					href={ templ.URL(fmt.Sprintf("/book/%d", data.UserID)) }
+					class="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors"
+				>
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
 					</svg>
 					Back to Services
 				</a>
