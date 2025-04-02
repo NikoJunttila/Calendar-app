@@ -56,7 +56,7 @@ func InitializeRoutes(router *chi.Mux) {
 		app.Use(kit.WithAuthentication(authConfig, false)) // strict set to false
 		app.Get("/unauthorized", kit.Handler(handlers.HandleUnauthorized))
 		// Routes
-		app.Get("/", kit.Handler(handlers.HandleLandingIndex))
+		//app.Get("/", kit.Handler(handlers.HandleLandingIndex))
 		app.Get("/test", kit.Handler(handlers.HandleTestIndex))
 		app.Post("/test-action", kit.Handler(handlers.HandleTestAction))
 	})

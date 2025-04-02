@@ -6,7 +6,7 @@ import (
 	"gothstack/app/views/layouts"
 )
 
-templ Test(ctx context.Context, title, description string, languages map[string]translations.Language, currentLangCode string, currentPath string) {
+templ Test(ctx context.Context, languages map[string]translations.Language, currentLangCode string, currentPath string) {
 	@layouts.App() {
 	<div class="p-4 border rounded-lg shadow-md bg-gray-50 space-y-4">
 		<!-- Language Selector Dropdown -->
@@ -31,9 +31,7 @@ templ Test(ctx context.Context, title, description string, languages map[string]
 			</select>
 		</div>
 
-		<h1 class="text-2xl font-bold text-blue-700 pt-10">hello { title }</h1>
 		<h2 class="text-xl italic text-gray-600">{ translations.T(ctx, "test_subtitle") }</h2>
-		<p class="text-gray-800">{ description }</p>
 
 		<button
 			hx-post="/test-action"

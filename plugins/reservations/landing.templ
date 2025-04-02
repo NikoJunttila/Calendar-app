@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"gothstack/app/views/components"
 	"gothstack/app/views/layouts"
+	"context"
+	t "gothstack/app/translations"
 )
 
 // LandingPageData holds data for the landing page
@@ -16,10 +18,10 @@ type LandingPageData struct {
 }
 
 // LandingPage displays the landing page for the reservations package
-templ LandingPage(data LandingPageData) {
+templ LandingPage(ctx context.Context, data LandingPageData) {
 	@layouts.BaseLayout() {
 		@components.Navigation()
-		<main class="bg-white">
+		<main>
 			<!-- Hero Section -->
 			<div class="relative isolate overflow-hidden bg-gradient-to-b from-blue-100/20">
 				<div class="mx-auto max-w-7xl pb-24 pt-10 sm:pb-32 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:px-8 lg:py-40">
@@ -28,6 +30,7 @@ templ LandingPage(data LandingPageData) {
 							<div class="max-w-lg">
 								<h1 class="mt-10 text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
 									Streamline Your Scheduling
+									{t.T(ctx, "greeting")}
 								</h1>
 								<p class="mt-6 text-lg leading-8 text-gray-600">
 									Create and manage your availability slots with ease. Let your clients book appointments online, 24/7.

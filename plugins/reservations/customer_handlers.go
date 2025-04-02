@@ -408,7 +408,7 @@ func HandleLandingPage(kit *kit.Kit) error {
 			},
 		},
 	}
-	return kit.Render(LandingPage(data))
+	return kit.Render(LandingPage(kit.Request.Context(), data))
 }
 
 // HandleDashboard displays the main dashboard for managing reservation settings

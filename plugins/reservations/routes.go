@@ -8,7 +8,7 @@ import (
 // InitRoutes sets up the routes for the reservations plugin.
 func InitRoutes(router chi.Router, authConfig kit.AuthenticationConfig) {
 	// --- Public Customer-Facing Routes ---
-	router.Get("/landing", kit.Handler(HandleLandingPage)) // Landing page
+	router.Get("/", kit.Handler(HandleLandingPage)) // Landing page
 	router.Get("/book/{userID}", kit.Handler(HandleCustomerServiceList))
 	router.Get("/book/{userID}/service/{serviceID}", kit.Handler(HandleCustomerTimeSlotSelection))
 	router.Get("/book/{userID}/service/{serviceID}/confirm", kit.Handler(HandleBookingConfirmationView))
