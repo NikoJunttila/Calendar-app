@@ -29,7 +29,7 @@ RUN templ generate
 # Fix ELF image error
 RUN npm rebuild esbuild
 
-# Build the application
+# In the builder stage, modify your RUN command:
 RUN make build
 
 # Final stage
@@ -68,6 +68,7 @@ EXPOSE 7331
 ENV DB_DRIVER=sqlite3
 ENV DB_NAME=/app/data/app.db
 ENV MIGRATION_DIR=migrations
-
+# Before final CMD
+RUN ls -la /app/public/assets/
 # Run migrations and start the application
 CMD ["sh", "-c", "goose -dir=\"$MIGRATION_DIR\" \"$DB_DRIVER\" \"$DB_NAME\" up && ./app_prod"]

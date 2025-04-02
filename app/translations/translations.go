@@ -42,7 +42,7 @@ const localesDir = "app/translations/locales" // Directory containing translatio
 // NewManager creates a new language manager by loading translations from JSON files
 func NewManager() *Manager {
 	m := &Manager{
-		defaultLang: "en",
+		defaultLang: "fi",
 		languages:   make(map[string]Language),
 	}
 

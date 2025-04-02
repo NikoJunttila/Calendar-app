@@ -83,5 +83,7 @@ To expose the application through Cloudflare Tunnels:
 docker buildx create --use
 docker buildx build --platform linux/arm64 -t ghcr.io/nikojunttila/calendar:latest --push .
 
+docker buildx build --platform linux/arm64 --no-cache -t ghcr.io/nikojunttila/calendar:latest --push .
+
 docker pull ghcr.io/nikojunttila/calendar:latest
 docker compose up
