@@ -8,13 +8,8 @@ import (
 	"gothstack/plugins/auth" // Added for User relation
 	"time"
 
-	// Import your user type if it exists elsewhere, e.g.:
-	// "gothstack/plugins/auth"
 	"gorm.io/gorm" // Uncommented for GORM operations
-	//"gothstack/app/db" // Already added above
 )
-
-// --- Service ---
 
 // Service represents a bookable service offered by a user.
 type Service struct {
@@ -49,15 +44,17 @@ func (Service) TableName() string {
 
 // TimeSlot represents an available time slot for booking.
 type TimeSlot struct {
-	ID        uint          `gorm:"primaryKey"`
-	UserID    uint          `gorm:"column:user_id;not null;index;index:idx_time_slots_user_date"` // User who owns this slot
-	ServiceID sql.NullInt64 `gorm:"column:service_id;index"`                                      // Added reference to Service (nullable)
-	Date      string        `gorm:"column:date;type:text;not null;index"`                         // Format: YYYY-MM-DD
-	Time      string        `gorm:"column:time;type:text;not null"`                               // Format: HH:MM
-	Duration  int           `gorm:"column:duration;not null"`                                     // Duration in minutes
-	IsBooked  bool          `gorm:"column:is_booked;not null;default:0;index"`
-	CreatedAt time.Time     `gorm:"column:created_at;not null;default:CURRENT_TIMESTAMP"`
-	UpdatedAt time.Time     `gorm:"column:updated_at;not null;default:CURRENT_TIMESTAMP"`
+	ID           uint          `gorm:"primaryKey"`
+	UserID       uint          `gorm:"column:user_id;not null;index;index:idx_time_slots_user_date"` // User who owns this slot
+	ServiceID    sql.NullInt64 `gorm:"column:service_id;index"`                                      // Added reference to Service (nullable)
+	Date         string        `gorm:"column:date;type:text;not null;index"`                         // Format: YYYY-MM-DD
+	Time         string        `gorm:"column:time;type:text;not null"`                               // Format: HH:MM
+	Duration     int           `gorm:"column:duration;not null"`                                     // Duration in minutes
+	IsBooked     bool          `gorm:"column:is_booked;not null;default:0;index"`
+	CreatedAt    time.Time     `gorm:"column:created_at;not null;default:CURRENT_TIMESTAMP"`
+	UpdatedAt    time.Time     `gorm:"column:updated_at;not null;default:CURRENT_TIMESTAMP"`
+	ReminderSent *time.Time    `gorm:"column:reminder_sent"` // Pointer allows nil -> NULL mapping
+	RealTime int64 `gorm:"column:real_time"` // Added gorm column tag for consistency
 
 	// Define GORM relationships (optional)
 	// User auth.User `gorm:"foreignKey:UserID"`
@@ -198,7 +195,7 @@ func (Webhook) TableName() string {
 // --- TimeSlot CRUD ---
 
 // CreateTimeSlot creates a new time slot.
-func CreateTimeSlot(userID uint, serviceID sql.NullInt64, dateStr, timeStr string, duration int) (TimeSlot, error) {
+func CreateTimeSlot(userID uint, serviceID sql.NullInt64, dateStr, timeStr string, duration int, real_time int64) (TimeSlot, error) {
 	slot := TimeSlot{
 		UserID:    userID,
 		ServiceID: serviceID, // Assign service ID
@@ -206,12 +203,24 @@ func CreateTimeSlot(userID uint, serviceID sql.NullInt64, dateStr, timeStr strin
 		Time:      timeStr,
 		Duration:  duration,
 		IsBooked:  false,
+		RealTime:  real_time,
 	}
 	result := db.Get().Create(&slot)
 	if result.Error != nil {
 		return slot, fmt.Errorf("failed to create time slot: %w", result.Error)
 	}
 	return slot, nil
+}
+func UpdateReminderSent(slotID uint, reminderSent time.Time) error {
+	result := db.Get().Model(&TimeSlot{}).Where("id = ?", slotID).Update("reminder_sent", reminderSent)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update reminder_sent status: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("time slot with ID %d not found", slotID)
+	}
+	
+	return nil
 }
 
 // GetTimeSlot retrieves a time slot by its ID.
@@ -225,6 +234,15 @@ func GetTimeSlot(id uint) (TimeSlot, error) {
 	return slot, nil
 }
 
+func GetOwner(id uint) (auth.User, error) {
+	var owner auth.User
+	result := db.Get().First(&owner, id)
+	if result.Error != nil {
+		return owner, fmt.Errorf("failed to retrieve time slot %d: %w", id, result.Error)
+	}
+	return owner, nil
+}
+
 // ListTimeSlots retrieves all time slots for a specific user.
 func ListTimeSlots(userID uint) ([]TimeSlot, error) {
 	var slots []TimeSlot
@@ -232,6 +250,33 @@ func ListTimeSlots(userID uint) ([]TimeSlot, error) {
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to list time slots for user %d: %w", userID, result.Error)
 	}
+	return slots, nil
+}
+func ListTimeSlotsBetweenNowAndTomorrowEnd() ([]TimeSlot, error) {
+	var slots []TimeSlot
+	
+	now := time.Now()
+	tomorrowEnd := time.Date(
+		now.Year(),
+		now.Month(),
+		now.Day()+1,
+		23,
+		59,
+		59,
+		0,
+		now.Location(),
+	)
+	
+	err := db.Get().
+		Where("real_time > ? AND real_time <= ? AND reminder_sent IS NULL",
+			now.Unix(),
+			tomorrowEnd.Unix()).
+		Find(&slots).Error
+	
+	if err != nil {
+		return slots, err
+	}
+	
 	return slots, nil
 }
 
@@ -488,6 +533,14 @@ func GetBooking(id, userID uint) (Booking, error) {
 	}
 	return booking, nil
 }
+func GetBookingByTimeslot(id uint) (Booking, error) {
+	var booking Booking
+	result := db.Get().Preload("Service").Where("time_slot_id = ?", id).First(&booking) // Preload Service
+	if result.Error != nil {
+		return booking, fmt.Errorf("failed to retrieve booking %d for timeslot: %w", id , result.Error)
+	}
+	return booking, nil
+}
 
 // GetBookingByRef retrieves a booking by its unique reference.
 func GetBookingByRef(bookingRef string) (Booking, error) {
@@ -502,10 +555,17 @@ func GetBookingByRef(bookingRef string) (Booking, error) {
 // ListBookings retrieves all bookings for a specific user.
 func ListBookings(userID uint) ([]Booking, error) {
 	var bookings []Booking
-	result := db.Get().Preload("TimeSlot").Preload("Service").Where("user_id = ?", userID).Order("created_at desc").Find(&bookings) // Preload Service
+	result := db.Get().
+		Preload("TimeSlot").
+		Preload("Service").
+		Where("user_id = ? AND status != ?", userID, StatusBookingCancelled).
+		Order("created_at desc").
+		Find(&bookings)
+
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to list bookings for user %d: %w", userID, result.Error)
 	}
+
 	return bookings, nil
 }
 
@@ -551,19 +611,10 @@ func CancelBooking(id, userID uint) error {
 		return fmt.Errorf("failed to update booking status to canceled for %d: %w", id, err)
 	}
 
-	// 3. Mark the associated time slot as available
-	var slot TimeSlot
-	if err := tx.First(&slot, booking.TimeSlotID).Error; err == nil {
-		slot.IsBooked = false
-		slot.UpdatedAt = time.Now()
-		if err := tx.Save(&slot).Error; err != nil {
-			// Log this error but don't necessarily fail the whole cancel operation
-			fmt.Printf("Warning: failed to mark time slot %d as available during cancellation: %v\n", slot.ID, err)
-			// Consider if you should rollback here based on requirements
-		}
-	} else {
-		// Log error if timeslot cannot be found, but proceed with cancellation
-		fmt.Printf("Warning: could not find associated time slot %d during cancellation: %v\n", booking.TimeSlotID, err)
+	// 3. Delete the associated time slot
+	if err := tx.Where("id = ?", booking.TimeSlotID).Delete(&TimeSlot{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete time slot %d for booking %d: %w", booking.TimeSlotID, id, err)
 	}
 
 	if err := tx.Commit().Error; err != nil {
@@ -892,6 +943,15 @@ func GetService(id, userID uint) (Service, error) {
 	result := db.Get().Where("id = ? AND user_id = ?", id, userID).First(&service)
 	if result.Error != nil {
 		return service, fmt.Errorf("failed to retrieve service %d for user %d: %w", id, userID, result.Error)
+	}
+	return service, nil
+}
+
+func GetServiceAnon(id uint) (Service, error) {
+	var service Service
+	result := db.Get().Where("id = ?", id).First(&service)
+	if result.Error != nil {
+		return service, fmt.Errorf("failed to retrieve service %d: %w", id, result.Error)
 	}
 	return service, nil
 }

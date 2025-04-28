@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"gothstack/plugins/reservations"
 
 	"github.com/anthdm/superkit/kit"
 	"github.com/go-chi/chi/v5"
@@ -39,6 +40,7 @@ func main() {
 	}
 
 	fmt.Printf("application running in %s at %s\n", kit.Env(), url)
+	reservations.SetupCron()
 
 	http.ListenAndServe(listenAddr, router)
 }
@@ -58,21 +60,12 @@ func disableCache(next http.Handler) http.Handler {
 	})
 }
 
-/*
-	 func init() {
-		if err := godotenv.Load(); err != nil {
-
-			log.Fatal(err)
-		}
-	}
-*/
 func init() {
 	// Load .env file
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("Error loading .env file:", err)
 	}
 	log.Println("SUPERKIT_ENV:", os.Getenv("SUPERKIT_ENV"))
-	log.Println("HTTP_LISTEN_ADDR:", os.Getenv("HTTP_LISTEN_ADDR"))
-	log.Println("DB_DRIVER:", os.Getenv("DB_DRIVER"))
 	log.Println("DB_NAME:", os.Getenv("DB_NAME"))
+	fmt.Println("loaded env")
 }

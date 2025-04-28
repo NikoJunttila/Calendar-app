@@ -19,7 +19,6 @@ type Config struct {
 }
 
 func NewSQL(cfg Config) (*sql.DB, error) {
-	fmt.Println(cfg)
 	switch cfg.Driver {
 	case DriverSqlite3:
 		name := cfg.Name

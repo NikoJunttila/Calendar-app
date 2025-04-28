@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -17,9 +18,15 @@ type BookingConfirmationPageData struct {
 	UserID   uint
 	UserName string
 	Service  Service
+	Booking  Booking
 	TimeSlot TimeSlot
 	Error    string
 	Success  string
+}
+type BookingConfirmationPageDataNew struct {
+	Booking Booking
+	Error   string
+	Success string
 }
 
 // HandleBookingConfirmationView displays the booking confirmation form
@@ -74,6 +81,24 @@ func HandleBookingConfirmationView(kit *kit.Kit) error {
 	return kit.Render(BookingConfirmation(data))
 }
 
+func convertStringDate(dateStr, timeStr string) int64 {
+	dateTimeStr := dateStr + " " + timeStr // Example: "2025-04-22 11:00"
+	layout := "2006-01-02 15:04"
+
+	location := time.Local // Use the system's local timezone
+
+	parsedTimeLocal, err := time.ParseInLocation(layout, dateTimeStr, location)
+	if err != nil {
+		fmt.Println("Error parsing date/time (Local assumption):", err)
+		return 0
+	} else {
+		// 4. Get the Unix timestamp. IMPORTANT: .Unix() *always* returns seconds
+		unixTimestampLocal := parsedTimeLocal.Unix()
+		fmt.Printf("Unix Timestamp (from Local parse): %d\n", unixTimestampLocal)
+		return unixTimestampLocal
+	}
+}
+
 // HandleBookingConfirmationPost processes the booking confirmation form submission
 func HandleBookingConfirmationPost(kit *kit.Kit) error {
 	// Get user ID and service ID from URL
@@ -111,14 +136,16 @@ func HandleBookingConfirmationPost(kit *kit.Kit) error {
 		slog.Error("Failed to fetch service", "serviceID", serviceID, "err", err)
 		return kit.Redirect(http.StatusSeeOther, fmt.Sprintf("/book/%d", userID))
 	}
-
+	realdate := convertStringDate(date, timeStr)
 	// Create the time slot first
+	//typeof := time.Now().Unix()
 	timeSlot, err := CreateTimeSlot(
 		uint(userID),
 		sql.NullInt64{Int64: int64(serviceID), Valid: true},
 		date,
 		timeStr,
 		service.Duration,
+		realdate,
 	)
 	if err != nil {
 		slog.Error("Failed to create time slot", "err", err)
@@ -149,41 +176,46 @@ func HandleBookingConfirmationPost(kit *kit.Kit) error {
 		}
 		return kit.Redirect(http.StatusSeeOther, fmt.Sprintf("/book/%d/service/%d/confirm?date=%s&time=%s", userID, serviceID, date, timeStr))
 	}
-
+	booking, _ := GetBookingByRef(bookingRef)
+	email := os.Getenv("SENDGRID_EMAIL")
+	err = sendBookingConfirmationEmail(booking, booking.TimeSlot, booking.Service, email)
+	if err != nil {
+		slog.Error("Failed to send email to client", "client", clientEmail)
+	}
+	user, err := GetOwner(booking.Service.UserID)
+	if err != nil {
+		slog.Error("can't find user id")
+	}
+	err = sendOwnerBookingNotificationEmail(booking, booking.TimeSlot, booking.Service, user, email)
+	if err != nil {
+		slog.Error("Failed to send email to owner", "owner", booking.Service.User.Email)
+	}
 	// Success - redirect to a success page or show success message
-	return kit.Redirect(http.StatusSeeOther, fmt.Sprintf("/book/%d/service/%d/success", userID, serviceID))
+	return kit.Redirect(http.StatusSeeOther, fmt.Sprintf("/book/service/success/%s", bookingRef))
 }
 
 // HandleBookingSuccess displays the booking success page
 func HandleBookingSuccess(kit *kit.Kit) error {
 	// Get user ID and service ID from URL
-	userIDStr := chi.URLParam(kit.Request, "userID")
-	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+	bk_ref := chi.URLParam(kit.Request, "bk")
+	booking, err := GetBookingByRef(bk_ref)
 	if err != nil {
-		slog.Error("Failed to parse user ID", "id", userIDStr, "err", err)
+		slog.Error("Failed to fetch booking", "booking_ref", bk_ref, "err", err)
 		return kit.Redirect(http.StatusSeeOther, "/")
 	}
-
-	serviceIDStr := chi.URLParam(kit.Request, "serviceID")
-	serviceID, err := strconv.ParseUint(serviceIDStr, 10, 32)
-	if err != nil {
-		slog.Error("Failed to parse service ID", "id", serviceIDStr, "err", err)
-		return kit.Redirect(http.StatusSeeOther, fmt.Sprintf("/book/%d", userID))
-	}
-
-	// Fetch service details
-	service, err := GetService(uint(serviceID), uint(userID))
-	if err != nil {
-		slog.Error("Failed to fetch service", "serviceID", serviceID, "err", err)
-		return kit.Redirect(http.StatusSeeOther, fmt.Sprintf("/book/%d", userID))
-	}
-
 	data := BookingConfirmationPageData{
-		UserID:   uint(userID),
-		UserName: "TODO figureout this",
-		Service:  service,
+		Service:  booking.Service,
+		Booking:  booking,
+		TimeSlot: booking.TimeSlot,
 		Success:  "Your booking has been confirmed! You will receive a confirmation email shortly.",
 	}
-
 	return kit.Render(BookingSuccess(data))
+}
+
+func ConvertDateFormat(dateStr string) (string, error) {
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse date: %w", err)
+	}
+	return date.Format("02-01-2006"), nil
 }

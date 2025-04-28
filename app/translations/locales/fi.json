@@ -1,5 +1,6 @@
 {
   "welcome": "Tervetuloa",
+  "welcome_back": "Tervetuloa takaisin",
   "greeting": "Hei, maailma!",
   "about": "Meistä",
   "landing_title": "Tervetuloa GothStackiin",
@@ -9,5 +10,4 @@
   "test_button_label": "Klikkaa Minua!",
   "test_action_message": "Painiketta klikattu onnistuneesti!",
   "test_initial_message": "Odotetaan painikkeen klikkausta..."
-  
 }

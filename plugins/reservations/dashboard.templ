@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"gothstack/app/views/components"
 	"gothstack/app/views/layouts"
+	t "gothstack/app/translations"
+  "context"
 )
 
 // DashboardPageData holds data for the dashboard page
@@ -21,15 +23,36 @@ type DashboardPageData struct {
 }
 
 // DashboardPage displays the main dashboard for managing reservation settings
-templ DashboardPage(data DashboardPageData) {
+templ DashboardPage(data DashboardPageData, ctx context.Context, languages map[string]t.Language, currentLangCode string, currentPath string) {
 	@layouts.BaseLayout() {
 		@components.Navigation()
 		<main class="py-10">
 			<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 				<!-- Welcome Section -->
 				<div class="mb-8">
-					<h1 class="text-2xl font-semibold text-gray-900">Welcome back, { data.UserName }</h1>
+					<h1 class="text-2xl font-semibold text-gray-900">{t.T(ctx,"welcome_back")}, { data.UserName }</h1>
 					<p class="mt-1 text-sm text-gray-500">Manage your services, bookings, and settings all in one place.</p>
+		</div>
+            	<div class="language-selector mb-4">
+			<select
+				name="lang"
+				class="p-2 border rounded bg-white"
+				hx-get={ string(templ.URL(currentPath)) }
+				hx-trigger="change"
+				hx-target="body"
+				hx-swap="outerHTML"
+				hx-push-url="true"
+			>
+				for _, lang := range languages {
+					<option
+						value={ lang.Code }
+						selected?={ lang.Code == currentLangCode }
+					>
+						{ lang.Name }
+					</option>
+				}
+			</select>
+
 				</div>
 
 				<!-- Stats Grid -->
@@ -143,7 +166,7 @@ templ DashboardPage(data DashboardPageData) {
 												<tr>
 													<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{ booking.ClientName }</td>
 													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{ booking.Service.Name }</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{ booking.TimeSlot.Date }</td>
+													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{ ConvertDateFormat(booking.TimeSlot.Date) }</td>
 													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{ booking.TimeSlot.Time }</td>
 													<td class="whitespace-nowrap px-3 py-4 text-sm">
 														<span class={ templ.KV("bg-green-100 text-green-800", booking.Status == "confirmed") } class={ templ.KV("bg-yellow-100 text-yellow-800", booking.Status == "pending") } class={ templ.KV("bg-red-100 text-red-800", booking.Status == "cancelled") } class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset">

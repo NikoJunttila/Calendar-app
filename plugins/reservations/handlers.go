@@ -5,11 +5,10 @@ import (
 	"gothstack/plugins/auth"
 	"log/slog" // Added for parsing form and redirect
 	"strconv"  // Added for string conversion
-	"time"     // Added for date calculations
+	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/anthdm/superkit/kit"
-	// v "github.com/anthdm/superkit/validate" // Can add validation later if needed
-	// "github.com/go-chi/chi/v5" // Not used yet
 )
 
 // ReservationsPageData holds data for the main reservations overview page.
@@ -17,7 +16,7 @@ type ReservationsPageData struct {
 	AvailableSlots []TimeSlot // Renamed from TimeSlots for clarity
 	Bookings       []Booking
 	Settings       Setting // User settings might be relevant
-	// Add FormValues/Errors here later if forms are added
+	ErrorMessage string
 }
 
 // SettingsFormData holds data for the settings form
@@ -29,48 +28,10 @@ type SettingsFormData struct {
 }
 
 // HandleReservationsIndex displays the main reservations overview page.
-// It lists available time slots and current bookings.
 func HandleReservationsIndex(kit *kit.Kit) error {
 	// Get authenticated user's ID
-
 	userID := kit.Auth().(auth.Auth).UserID
-
-	// Fetch user settings (might influence displayed slots, e.g., timezone, notice period)
-	settings, err := GetSettings(userID)
-	if err != nil {
-		// Log the error or handle it gracefully
-		// Use Warn level as we are falling back to defaults
-		slog.Warn(
-			"Failed to get settings, using defaults",
-			"userID", userID,
-			"err", err,
-		)
-		// For now, use default settings if fetch fails
-		settings = Setting{Timezone: "UTC", MaxSchedulingAdvance: 60} // Example default
-		// Optionally return error: return fmt.Errorf("could not load settings: %w", err)
-	}
-
-	// Fetch available time slots (e.g., for the next N days based on settings)
-	// Using ListAvailableTimeSlots requires a date range.
-	startDate := time.Now()
-	// Use MaxSchedulingAdvance from settings (defaulting if needed)
-	endDate := startDate.AddDate(0, 0, settings.MaxSchedulingAdvance)
-	availableSlots, err := ListAvailableTimeSlots(userID, startDate, endDate)
-	if err != nil {
-		// Use Error level as this is a core data fetching failure
-		slog.Error(
-			"Failed to list available time slots",
-			"userID", userID,
-			"startDate", startDate.Format(time.RFC3339), // Log dates consistently
-			"endDate", endDate.Format(time.RFC3339),
-			"err", err,
-		)
-		// Decide how to handle: return error, show message, etc.
-		// For now, continue with an empty list
-		availableSlots = []TimeSlot{}
-		// Optionally return err: return fmt.Errorf("could not load available slots: %w", err)
-	}
-
+	var data  ReservationsPageData
 	// Fetch existing bookings for the user
 	bookings, err := ListBookings(userID)
 	if err != nil {
@@ -81,17 +42,11 @@ func HandleReservationsIndex(kit *kit.Kit) error {
 			"err", err,
 		)
 		// Decide how to handle
-		bookings = []Booking{}
-		// Optionally return err: return fmt.Errorf("could not load bookings: %w", err)
+		data.ErrorMessage = fmt.Sprintf("Failed to get bookings %v", err)
+		return kit.Render(ReservationsIndex(data))
 	}
-
-	// Prepare data for the template
-	data := ReservationsPageData{
-		AvailableSlots: availableSlots,
-		Bookings:       bookings,
-		Settings:       settings,
-	}
-
+	data.Bookings = bookings
+	fmt.Println(data)
 	// Render the Templ component
 	return kit.Render(ReservationsIndex(data))
 }
@@ -189,8 +144,34 @@ func HandleSettingsUpdate(kit *kit.Kit) error {
 		SuccessMessage: "Settings updated successfully!",
 	}
 	return kit.Render(SettingsForm(data))
+}
 
-	// Alternative on Success: Redirect back to settings page or another page
-	// kit.Session.Put(kit.Request.Context(), "flash_success", "Settings updated successfully!")
-	// return kit.Redirect(http.StatusSeeOther, "/reservations/settings")
+func handleDeleteBooking(kit *kit.Kit) error {
+	userID := kit.Auth().(auth.Auth).UserID
+	bookingIDStr := chi.URLParam(kit.Request, "id")
+	bookingID, err := strconv.ParseUint(bookingIDStr, 10, 32)
+	if err != nil {
+		slog.Warn("Invalid service ID requested for delete", "id", bookingIDStr, "err", err)
+		// Respond appropriately for HTMX if used (e.g., no content, error message)
+		return kit.Redirect(http.StatusSeeOther, "/reservations/services") // Fallback redirect
+	}
+
+	// Optional: Check if service can be deleted (e.g., no future bookings)
+
+	err = CancelBooking(uint(bookingID), userID)
+	if err != nil {
+		slog.Error("Failed to delete service", "userID", userID, "serviceID", bookingID, "err", err)
+		// Respond with error for HTMX or set flash message and redirect
+		// For HTMX, could return a toast message component
+		//kit.Session.Put(kit.Request.Context(), "flash_error", "Failed to delete service. It might be in use.")
+		return kit.Redirect(http.StatusSeeOther, "/reservations")
+	}
+
+	// Success
+	// For HTMX: Return HTTP 200 OK (often with no content, as target element is removed)
+	// Or set flash message and redirect
+	//kit.Session.Put(kit.Request.Context(), "flash_success", "Service deleted successfully.")
+	// If using HTMX to remove the row, we might not redirect, just return OK.
+	// For now, redirecting to the list:
+	return kit.Redirect(http.StatusSeeOther, "/reservations")
 }

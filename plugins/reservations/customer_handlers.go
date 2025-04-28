@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"time" // Needed for date range in ListAvailableTimeSlotsForService
+	"gothstack/app/translations"
 
 	"github.com/anthdm/superkit/kit"
 	"github.com/go-chi/chi/v5"
@@ -415,6 +416,14 @@ func HandleLandingPage(kit *kit.Kit) error {
 func HandleDashboard(kit *kit.Kit) error {
 	userID := kit.Auth().(auth.Auth).UserID
 	userEmail := kit.Auth().(auth.Auth).Email
+	currentLangCode := translations.M.DefaultLanguage() // Default if not found
+	if langVal := kit.Request.Context().Value(translations.ContextKey{}); langVal != nil {
+		if code, ok := langVal.(string); ok {
+			currentLangCode = code
+		}
+	}
+	availableLangs := translations.M.GetLanguages()
+	currentPath := kit.Request.URL.Path
 
 	// Get user's services
 	services, err := ListServices(userID, false) // false to get all services, not just active ones
@@ -424,7 +433,7 @@ func HandleDashboard(kit *kit.Kit) error {
 			UserID:   userID,
 			UserName: userEmail,
 			Error:    "Failed to load services",
-		}))
+		},kit.Request.Context(), availableLangs,currentLangCode,currentPath))
 	}
 
 	// Get user's bookings
@@ -435,7 +444,7 @@ func HandleDashboard(kit *kit.Kit) error {
 			UserID:   userID,
 			UserName: userEmail,
 			Error:    "Failed to load bookings",
-		}))
+		},kit.Request.Context(), availableLangs,currentLangCode,currentPath))
 	}
 
 	// Calculate stats
@@ -450,6 +459,10 @@ func HandleDashboard(kit *kit.Kit) error {
 	now := time.Now()
 	for _, booking := range bookings {
 		// Parse the booking date and time
+		if booking.Status == "canceled"{
+		fmt.Println(booking.Status)
+			continue
+		}
 		bookingDateTime, err := time.Parse("2006-01-02 15:04", fmt.Sprintf("%s %s", booking.TimeSlot.Date, booking.TimeSlot.Time))
 		if err != nil {
 			slog.Error("Failed to parse booking datetime", "bookingID", booking.ID, "err", err)
@@ -475,10 +488,10 @@ func HandleDashboard(kit *kit.Kit) error {
 			TotalBookings:    len(bookings),
 			UpcomingBookings: upcomingBookings,
 		},
-		RecentBookings: bookings[:min(5, len(bookings))], // Show only the 5 most recent bookings
+		RecentBookings: bookings[:min(10, len(bookings))], // Show only the 10 most recent bookings
 	}
 
-	return kit.Render(DashboardPage(data))
+	return kit.Render(DashboardPage(data, kit.Request.Context(), availableLangs,currentLangCode,currentPath))
 }
 
 // min returns the smaller of x or y

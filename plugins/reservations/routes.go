@@ -13,10 +13,7 @@ func InitRoutes(router chi.Router, authConfig kit.AuthenticationConfig) {
 	router.Get("/book/{userID}/service/{serviceID}", kit.Handler(HandleCustomerTimeSlotSelection))
 	router.Get("/book/{userID}/service/{serviceID}/confirm", kit.Handler(HandleBookingConfirmationView))
 	router.Post("/book/{userID}/service/{serviceID}/confirm", kit.Handler(HandleBookingConfirmationPost))
-	router.Get("/book/{userID}/service/{serviceID}/success", kit.Handler(HandleBookingSuccess))
-	// TODO: Add route for booking confirmation GET/POST, e.g.:
-	// router.Get("/book/{userID}/service/{serviceID}/confirm", kit.Handler(HandleBookingConfirmationView))
-	// router.Post("/book/{userID}/service/{serviceID}/confirm", kit.Handler(HandleBookingConfirmationPost))
+	router.Get("/book/service/success/{bk}", kit.Handler(HandleBookingSuccess))
 
 	// --- Authenticated Admin Routes ---
 	router.Group(func(auth chi.Router) {
@@ -49,16 +46,6 @@ func InitRoutes(router chi.Router, authConfig kit.AuthenticationConfig) {
 		// auth.Post("/reservations/bookings/{bookingID}/cancel", kit.Handler(HandleBookingCancel)) // Needs handler
 		// auth.Delete("/reservations/bookings/{bookingID}", kit.Handler(HandleBookingCancel)) // Alternative method
 
-		// Example routes for managing time slots
-		// auth.Get("/reservations/slots/create", kit.Handler(HandleTimeSlotCreateForm)) // Needs handler
-		// auth.Post("/reservations/slots", kit.Handler(HandleTimeSlotCreatePost)) // Needs handler
-		// auth.Delete("/reservations/slots/{slotID}", kit.Handler(HandleTimeSlotDelete)) // Needs handler
-
-		// Example routes for settings
-		// auth.Get("/reservations/settings", kit.Handler(HandleSettingsView)) // Needs handler
-		// auth.Post("/reservations/settings", kit.Handler(HandleSettingsUpdate)) // Needs handler
-
-		// Business hours management
 		auth.Get("/reservations/business-hours", kit.Handler(HandleBusinessHoursView))
 		auth.Post("/reservations/business-hours", kit.Handler(HandleBusinessHoursUpdate))
 
@@ -67,5 +54,8 @@ func InitRoutes(router chi.Router, authConfig kit.AuthenticationConfig) {
 		auth.Post("/reservations/special-dates", kit.Handler(HandleSpecialDateCreate))
 		auth.Post("/reservations/special-dates/range", kit.Handler(HandleSpecialDateRangeCreate))
 		auth.Post("/reservations/special-dates/{id}/delete", kit.Handler(HandleSpecialDateDelete))
+
+		//delete routes
+		auth.Delete("/reservations/{id}/delete", kit.Handler(handleDeleteBooking))
 	})
 }

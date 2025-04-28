@@ -191,6 +191,7 @@ func Setup() {
 	if err := godotenv.Load(); err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("setup running", os.Getenv("SENDGRID_EMAIL"))
 	appSecret := os.Getenv("SUPERKIT_SECRET")
 	if len(appSecret) < 32 {
 		// For security reasons we are calling os.Exit(1) here so Go's panic recover won't
