@@ -37,14 +37,13 @@ func Init() {
 	}
 }
 
-const localesDir = "app/translations/locales" // Directory containing translation files
-
 // NewManager creates a new language manager by loading translations from JSON files
 func NewManager() *Manager {
 	m := &Manager{
 		defaultLang: "fi",
 		languages:   make(map[string]Language),
 	}
+	localesDir := os.Getenv("LOCALE_DIR")
 
 	files, err := os.ReadDir(localesDir)
 	if err != nil {

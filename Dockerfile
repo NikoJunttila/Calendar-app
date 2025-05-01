@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Install required dependencies
 RUN apk add --no-cache git make npm build-base
@@ -33,7 +33,7 @@ RUN npm rebuild esbuild
 RUN make build
 
 # Final stage
-FROM alpine:3.19
+FROM alpine:3.21
 
 # Install SQLite and other runtime dependencies
 RUN apk add --no-cache ca-certificates tzdata sqlite
@@ -56,9 +56,10 @@ COPY --from=builder /app/public ./public
 # Copy migrations directory from the correct path
 COPY --from=builder /app/app/db/migrations ./migrations
 
+COPY --from=builder /app/app/translations/locales /app/translations/locales
+
 # Copy .env file if it exists
 COPY --from=builder /app/.env* ./
-
 
 # Expose the port the app runs on
 ENV HTTP_LISTEN_ADDR=:7331
@@ -68,6 +69,7 @@ EXPOSE 7331
 ENV DB_DRIVER=sqlite3
 ENV DB_NAME=/app/data/app.db
 ENV MIGRATION_DIR=migrations
+ENV LOCALE_DIR=/app/translations/locales
 # Before final CMD
 RUN ls -la /app/public/assets/
 # Run migrations and start the application

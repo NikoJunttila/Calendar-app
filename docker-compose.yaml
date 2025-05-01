@@ -19,6 +19,7 @@ services:
       - DB_DRIVER=sqlite3
       - DB_NAME=/app/data/app.db
       - MIGRATION_DIR=migrations
+      - LOCALE_DIR=/app/translations/locales
     restart: unless-stopped
 volumes:
   calendar-data:
