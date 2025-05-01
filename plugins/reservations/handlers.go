@@ -4,11 +4,11 @@ import (
 	"fmt" // Added for string formatting
 	"gothstack/plugins/auth"
 	"log/slog" // Added for parsing form and redirect
-	"strconv"  // Added for string conversion
 	"net/http"
+	"strconv" // Added for string conversion
 
-	"github.com/go-chi/chi/v5"
 	"github.com/anthdm/superkit/kit"
+	"github.com/go-chi/chi/v5"
 )
 
 // ReservationsPageData holds data for the main reservations overview page.
@@ -16,7 +16,7 @@ type ReservationsPageData struct {
 	AvailableSlots []TimeSlot // Renamed from TimeSlots for clarity
 	Bookings       []Booking
 	Settings       Setting // User settings might be relevant
-	ErrorMessage string
+	ErrorMessage   string
 }
 
 // SettingsFormData holds data for the settings form
@@ -31,7 +31,7 @@ type SettingsFormData struct {
 func HandleReservationsIndex(kit *kit.Kit) error {
 	// Get authenticated user's ID
 	userID := kit.Auth().(auth.Auth).UserID
-	var data  ReservationsPageData
+	var data ReservationsPageData
 	// Fetch existing bookings for the user
 	bookings, err := ListBookings(userID)
 	if err != nil {
@@ -103,6 +103,7 @@ func HandleSettingsUpdate(kit *kit.Kit) error {
 		NotificationEmail:    kit.Request.FormValue("notification_email") == "on", // Checkbox value
 		NotificationSMS:      kit.Request.FormValue("notification_sms") == "on",   // Checkbox value
 		CalendarView:         kit.Request.FormValue("calendar_view"),
+		BusinessName:         kit.Request.FormValue("business_name"),
 		MinSchedulingNotice:  minNotice,
 		MaxSchedulingAdvance: maxAdvance,
 		// ID, CreatedAt, UpdatedAt will be handled by UpdateSettings/GORM

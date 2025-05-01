@@ -839,6 +839,11 @@ body {
   margin-right: auto;
 }
 
+.my-2 {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
 .my-4 {
   margin-top: 1rem;
   margin-bottom: 1rem;
@@ -2481,6 +2486,10 @@ body {
   key-start: end;
 }
 
+.\[limitedStringSpan\:\%v\] {
+  limited-string-span: %v;
+}
+
 .\[nSrc\:end\] {
   n-src: end;
 }
@@ -2503,6 +2512,10 @@ body {
 
 .\[poolPos\:\(poolPos\+16\)\] {
   pool-pos: (poolPos+16);
+}
+
+.\[rangeIntSpan\:\%v\] {
+  range-int-span: %v;
 }
 
 .\[rows\:\%v\] {

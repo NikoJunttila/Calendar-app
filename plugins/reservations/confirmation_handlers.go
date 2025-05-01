@@ -78,7 +78,7 @@ func HandleBookingConfirmationView(kit *kit.Kit) error {
 		TimeSlot: timeSlot,
 	}
 
-	return kit.Render(BookingConfirmation(data))
+	return kit.Render(BookingConfirmation(data, kit.Request.Context()))
 }
 
 func convertStringDate(dateStr, timeStr string) int64 {
@@ -209,7 +209,7 @@ func HandleBookingSuccess(kit *kit.Kit) error {
 		TimeSlot: booking.TimeSlot,
 		Success:  "Your booking has been confirmed! You will receive a confirmation email shortly.",
 	}
-	return kit.Render(BookingSuccess(data))
+	return kit.Render(BookingSuccess(data, kit.Request.Context()))
 }
 
 func ConvertDateFormat(dateStr string) (string, error) {

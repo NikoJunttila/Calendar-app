@@ -12,6 +12,7 @@ require (
 	github.com/anthdm/superkit v0.0.0-20240701091803-e7f8e0aad3e9
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/goodsign/monday v1.0.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/sessions v1.4.0
 	github.com/joho/godotenv v1.5.1

@@ -18,6 +18,9 @@ github.com/go-chi/chi/v5/middleware
 # github.com/golang-jwt/jwt/v5 v5.2.1
 ## explicit; go 1.18
 github.com/golang-jwt/jwt/v5
+# github.com/goodsign/monday v1.0.2
+## explicit; go 1.13
+github.com/goodsign/monday
 # github.com/google/uuid v1.6.0
 ## explicit
 github.com/google/uuid

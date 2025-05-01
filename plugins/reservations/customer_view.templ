@@ -3,9 +3,11 @@ package reservations
 import (
 	"database/sql" // Needed for sql.NullFloat64
 	"fmt"
-	"gothstack/app/views/components" // Import components
 	"gothstack/app/views/layouts"    // Import layouts
+	t "gothstack/app/translations"
 	"time"
+  	"context"
+	"github.com/goodsign/monday"
 )
 
 // --- Helper Functions ---
@@ -23,30 +25,52 @@ func formatPrice(price sql.NullFloat64) string {
 // formatDuration formats the duration in minutes into a readable string.
 func formatDuration(minutes int) string {
 	if minutes < 60 {
-		return fmt.Sprintf("%d min", minutes)
+		return fmt.Sprintf("%d minuuttia", minutes)
 	}
 	hours := minutes / 60
 	remainingMinutes := minutes % 60
 	if remainingMinutes == 0 {
 		if hours == 1 {
-			return "1 hour"
+			return "1 tunti"
 		}
-		return fmt.Sprintf("%d hours", hours)
+		return fmt.Sprintf("%d tuntia", hours)
 	}
-	return fmt.Sprintf("%d hr %d min", hours, remainingMinutes)
+	return fmt.Sprintf("%d tuntia :%d minuuttia", hours, remainingMinutes)
 }
 
 // --- Components ---
 
 // CustomerServiceList displays the list of services available for booking.
 // It should ideally be wrapped in a main layout component.
-templ CustomerServiceList(data CustomerServiceListPageData) {
+templ CustomerServiceList(data CustomerServiceListPageData, ctx context.Context, languages map[string]t.Language, currentLangCode string, currentPath string) {
 	@layouts.BaseLayout() {
-		@components.Navigation()
 		<main class="container mx-auto px-4 py-8 max-w-4xl">
 			<div class="mb-8 border-b pb-4">
-				<h1 class="text-3xl font-bold text-gray-800">Services by <span class="text-indigo-600">{ data.UserName }</span></h1>
-				<p class="text-gray-500 mt-2">Select a service to proceed with booking</p>
+				<h1 class="text-3xl font-bold text-gray-800">{t.T(ctx,"services")} <span class="text-indigo-600">{ data.UserName }</span></h1>
+				<p class="text-gray-500 mt-2"> {t.T(ctx,"select_service")}</p>
+            	<div class="language-selector my-2">
+			<select
+				name="lang"
+				class="p-2 border rounded bg-white"
+				hx-get={ string(templ.URL(currentPath)) }
+				hx-trigger="change"
+				hx-target="body"
+				hx-swap="outerHTML"
+				hx-push-url="true"
+			>
+				for _, lang := range languages {
+					<option
+						value={ lang.Code }
+						selected?={ lang.Code == currentLangCode }
+					>
+						{ lang.Name }
+					</option>
+				}
+			</select>
+
+				</div>
+
+
 			</div>
 			
 			if data.Error != "" {
@@ -83,7 +107,7 @@ templ CustomerServiceList(data CustomerServiceListPageData) {
 										<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
-										<span>{ formatDuration(service.Duration) }</span>
+										<span>{ formatDuration(service.Duration) } </span>
 									</div>
 									
 								<!--	<div class="flex items-center text-sm text-gray-500">
@@ -108,7 +132,7 @@ templ CustomerServiceList(data CustomerServiceListPageData) {
 							<div class="mt-2 p-3 bg-gray-50 border-t border-gray-100">
 								<a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d", data.UserID, service.ID)) } 
 								   class="w-full block text-center py-2 px-4 bg-indigo-600 text-white rounded font-medium hover:bg-indigo-700 transition-colors duration-200">
-									Book Now
+									{t.T(ctx,"book_now")}
 								</a>
 							</div>
 						</div>
@@ -120,13 +144,12 @@ templ CustomerServiceList(data CustomerServiceListPageData) {
 }
 
 // CustomerTimeSlotSelection displays available time slots for a specific service with improved styling.
-templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
+templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData, ctx context.Context) {
 	@layouts.BaseLayout() {
-		@components.Navigation()
 		<main class="container mx-auto px-4 py-8 max-w-6xl">
 			<div class="mb-6">
 			<div class="flex items-center gap-4">
-				<h1 class="text-3xl font-bold text-gray-800">Select an Available Time</h1>
+				<h1 class="text-3xl font-bold text-gray-800">{ t.T(ctx, "select_available_time") }</h1>
 				<a
 					href={ templ.URL(fmt.Sprintf("/book/%d", data.UserID)) }
 					class="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors"
@@ -134,10 +157,10 @@ templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
 					</svg>
-					Back to Services
+					{ t.T(ctx, "back_to_services") }
 				</a>
 			</div>
-				<p class="text-gray-600 mt-2">Choose from available slots for your appointment</p>
+				<p class="text-gray-600 mt-2"> { t.T(ctx, "choose_slots") }</p>
 			</div>
 			<!-- Service details card -->
 			<div class="mb-8 p-6 border border-gray-200 rounded-lg bg-white shadow-md transition-all hover:shadow-lg">
@@ -149,14 +172,6 @@ templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
 						</svg>
 						<span>{ formatDuration(data.Service.Duration) }</span>
 					</div>
-<!--
-					<div class="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800">
-						<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-						</svg>
-						<span>{ formatPrice(data.Service.Price) }</span>
-					</div>
--->
 					if data.Service.Location.Valid {
 						<div class="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800">
 							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -191,7 +206,7 @@ templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
 							</svg>
 						</span>
-						<span>Week of <span class="text-blue-600 font-bold">{ data.WeekStart.Format("January 2, 2006") }</span></span>
+						<span>{ t.T(ctx, "week_of") } <span class="text-blue-600 font-bold">{ monday.Format(data.WeekStart,"January 2, 2006",monday.LocaleFiFI) }</span></span>
 					</h3>
 					<div class="flex gap-2">
 						<a
@@ -206,7 +221,7 @@ templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
 								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
 								</svg>
-								Previous Week
+								{ t.T(ctx, "previous_week") }
 							</div>
 						</a>
 						<a
@@ -218,7 +233,7 @@ templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
                 templ.KV("text-gray-400 bg-gray-100 border border-gray-200", data.WeekEnd.Equal(data.MaxAdvanceDate)),
                 templ.KV("text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400 shadow-sm", !data.WeekEnd.Equal(data.MaxAdvanceDate)) }
 							>
-								Next Week
+							{ t.T(ctx, "next_week") }
 								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
 								</svg>
@@ -231,16 +246,16 @@ templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 						</svg>
-						<p class="text-gray-700 text-lg">No available time slots found for this week.</p>
-						<p class="mt-2 text-gray-500">Try selecting a different week or service.</p>
+						<p class="text-gray-700 text-lg"> { t.T(ctx, "no_slots_found") } </p>
+						<p class="mt-2 text-gray-500"> { t.T(ctx, "try_different_week") } </p>
 					</div>
 				} else {
 					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 						for _, day := range data.Days {
 							<div class="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:translate-y-1 hover:shadow-lg">
 								<div style="padding: 0.75rem 1rem" class={ templ.KV("bg-blue-600 text-white", day.Date.Weekday() == time.Monday) }>
-									<h4 class="font-bold text-lg">{ day.Date.Format("Monday") }</h4>
-									<div class="text-sm opacity-90">{ day.Date.Format("January 2") }</div>
+									<h4 class="font-bold text-lg">{ monday.Format(day.Date,"Monday",monday.LocaleFiFI) }</h4>
+									<div class="text-sm opacity-90">{ monday.Format(day.Date,"January 2",monday.LocaleFiFI) }  </div>
 								</div>
 								<div class="p-4">
 									if len(day.DaySlots) == 0 {
@@ -248,15 +263,25 @@ templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
 											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 											</svg>
-											<span>No available slots</span>
+											<span> { t.T(ctx, "no_available_slots") } </span>
 										</div>
-									} else {
+									} else if day.IsHoliday{
+										<div class="flex items-center justify-center py-6 text-gray-500">
+											// Using a calendar icon (Heroicons)
+											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+												<path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+											</svg>
+											<span>
+												{ t.T(ctx,"closed_for") } <span class="font-semibold text-gray-600">{ day.Holiday.Description }</span>
+											</span>
+										</div>
+                  } else {
 										<div class="grid grid-cols-2 gap-2">
 											for _, slot := range day.DaySlots {
 												if slot.IsBooked {
 													<div class="inline-block text-center py-2 px-1 bg-gray-100 text-gray-400 font-medium rounded-md border border-gray-200 cursor-not-allowed">
 														{ slot.Time }
-														<span class="block text-xs text-gray-400">Booked</span>
+														<span class="block text-xs text-gray-400"> { t.T(ctx, "booked") } </span>
 													</div>
 												} else {
 													<a
@@ -287,7 +312,7 @@ templ CustomerTimeSlotSelection(data CustomerTimeSlotPageData) {
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
 					</svg>
-					Back to Services
+					{ t.T(ctx, "back_to_services") }
 				</a>
 			</div>
 		</main>

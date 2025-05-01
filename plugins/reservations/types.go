@@ -54,7 +54,7 @@ type TimeSlot struct {
 	CreatedAt    time.Time     `gorm:"column:created_at;not null;default:CURRENT_TIMESTAMP"`
 	UpdatedAt    time.Time     `gorm:"column:updated_at;not null;default:CURRENT_TIMESTAMP"`
 	ReminderSent *time.Time    `gorm:"column:reminder_sent"` // Pointer allows nil -> NULL mapping
-	RealTime int64 `gorm:"column:real_time"` // Added gorm column tag for consistency
+	RealTime     int64         `gorm:"column:real_time"`     // Added gorm column tag for consistency
 
 	// Define GORM relationships (optional)
 	// User auth.User `gorm:"foreignKey:UserID"`
@@ -108,16 +108,18 @@ func (Booking) TableName() string {
 
 // Setting represents user-specific preferences for the reservation system.
 type Setting struct {
-	ID                   uint      `gorm:"primaryKey"`
-	UserID               uint      `gorm:"column:user_id;not null;uniqueIndex"` // Each user has one settings row
-	Timezone             string    `gorm:"column:timezone;type:text;not null;default:'UTC'"`
-	NotificationEmail    bool      `gorm:"column:notification_email;not null;default:1"`
-	NotificationSMS      bool      `gorm:"column:notification_sms;not null;default:0"`
-	CalendarView         string    `gorm:"column:calendar_view;type:text;not null;default:'week'"` // week, month, day
-	MinSchedulingNotice  int       `gorm:"column:min_scheduling_notice;not null;default:24"`       // hours
-	MaxSchedulingAdvance int       `gorm:"column:max_scheduling_advance;not null;default:60"`      // days
-	CreatedAt            time.Time `gorm:"column:created_at;not null;default:CURRENT_TIMESTAMP"`
-	UpdatedAt            time.Time `gorm:"column:updated_at;not null;default:CURRENT_TIMESTAMP"`
+	ID                   uint   `gorm:"primaryKey"`
+	UserID               uint   `gorm:"column:user_id;not null;uniqueIndex"` // Each user has one settings row
+	Timezone             string `gorm:"column:timezone;type:text;not null;default:'UTC'"`
+	NotificationEmail    bool   `gorm:"column:notification_email;not null;default:1"`
+	NotificationSMS      bool   `gorm:"column:notification_sms;not null;default:0"`
+	CalendarView         string `gorm:"column:calendar_view;type:text;not null;default:'week'"` // week, month, day
+	MinSchedulingNotice  int    `gorm:"column:min_scheduling_notice;not null;default:24"`       // hours
+	MaxSchedulingAdvance int    `gorm:"column:max_scheduling_advance;not null;default:60"`      // days
+	BusinessName         string `gorm:"column:business_name;type:text"`
+
+	CreatedAt time.Time `gorm:"column:created_at;not null;default:CURRENT_TIMESTAMP"`
+	UpdatedAt time.Time `gorm:"column:updated_at;not null;default:CURRENT_TIMESTAMP"`
 
 	// Define GORM relationships (optional)
 	// User auth.User `gorm:"foreignKey:UserID"`
@@ -219,7 +221,7 @@ func UpdateReminderSent(slotID uint, reminderSent time.Time) error {
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("time slot with ID %d not found", slotID)
 	}
-	
+
 	return nil
 }
 
@@ -254,7 +256,7 @@ func ListTimeSlots(userID uint) ([]TimeSlot, error) {
 }
 func ListTimeSlotsBetweenNowAndTomorrowEnd() ([]TimeSlot, error) {
 	var slots []TimeSlot
-	
+
 	now := time.Now()
 	tomorrowEnd := time.Date(
 		now.Year(),
@@ -266,17 +268,17 @@ func ListTimeSlotsBetweenNowAndTomorrowEnd() ([]TimeSlot, error) {
 		0,
 		now.Location(),
 	)
-	
+
 	err := db.Get().
 		Where("real_time > ? AND real_time <= ? AND reminder_sent IS NULL",
 			now.Unix(),
 			tomorrowEnd.Unix()).
 		Find(&slots).Error
-	
+
 	if err != nil {
 		return slots, err
 	}
-	
+
 	return slots, nil
 }
 
@@ -537,7 +539,7 @@ func GetBookingByTimeslot(id uint) (Booking, error) {
 	var booking Booking
 	result := db.Get().Preload("Service").Where("time_slot_id = ?", id).First(&booking) // Preload Service
 	if result.Error != nil {
-		return booking, fmt.Errorf("failed to retrieve booking %d for timeslot: %w", id , result.Error)
+		return booking, fmt.Errorf("failed to retrieve booking %d for timeslot: %w", id, result.Error)
 	}
 	return booking, nil
 }

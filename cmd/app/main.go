@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"gothstack/plugins/reservations"
+	// "gothstack/plugins/reservations"
 
 	"github.com/anthdm/superkit/kit"
 	"github.com/go-chi/chi/v5"
@@ -40,7 +40,7 @@ func main() {
 	}
 
 	fmt.Printf("application running in %s at %s\n", kit.Env(), url)
-	reservations.SetupCron()
+	// reservations.SetupCron()
 
 	http.ListenAndServe(listenAddr, router)
 }

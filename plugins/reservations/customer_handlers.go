@@ -3,12 +3,13 @@ package reservations
 import (
 	"database/sql"
 	"fmt"
+	"gothstack/app/translations"
 	"gothstack/plugins/auth"
+	"gothstack/plugins/calendar"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"time" // Needed for date range in ListAvailableTimeSlotsForService
-	"gothstack/app/translations"
 
 	"github.com/anthdm/superkit/kit"
 	"github.com/go-chi/chi/v5"
@@ -34,9 +35,11 @@ type CustomerTimeSlotPageData struct {
 	CurrentWeek    uint
 	MaxAdvanceDate time.Time // Maximum date that can be booked
 	Days           []struct {
-		Date     time.Time
-		DateStr  string
-		DaySlots []TimeSlot
+		Date      time.Time
+		DateStr   string
+		DaySlots  []TimeSlot
+		IsHoliday bool
+		Holiday   calendar.FinnishHoliday
 	}
 }
 
@@ -44,6 +47,15 @@ type CustomerTimeSlotPageData struct {
 // Route example: /book/{userID}
 func HandleCustomerServiceList(kit *kit.Kit) error {
 	// 1. Get userID from URL
+	currentLangCode := translations.M.DefaultLanguage() // Default if not found
+	if langVal := kit.Request.Context().Value(translations.ContextKey{}); langVal != nil {
+		if code, ok := langVal.(string); ok {
+			currentLangCode = code
+		}
+	}
+	availableLangs := translations.M.GetLanguages()
+	currentPath := kit.Request.URL.Path
+
 	userIDStr := chi.URLParam(kit.Request, "userID")
 	userID, err := strconv.ParseUint(userIDStr, 10, 32)
 	if err != nil {
@@ -51,12 +63,18 @@ func HandleCustomerServiceList(kit *kit.Kit) error {
 		data := CustomerServiceListPageData{Error: "Invalid user ID."}
 		// Render the list view with an error. Assumes CustomerServiceList template handles Error field.
 		// You might want a dedicated error page template later.
-		return kit.Render(CustomerServiceList(data)) // Defined in customer_view.templ
+		return kit.Render(CustomerServiceList(data, kit.Request.Context(), availableLangs, currentLangCode, currentPath))
 	}
 
 	// 2. Fetch user details (Optional - Placeholder)
 	// TODO: Fetch user's public/business name from your auth/user system if needed.
-	userName := fmt.Sprintf("User %d's Services", userID) // Placeholder
+	set, err := GetSettings(uint(userID)) // Placeholder
+	var userName string
+	if err != nil {
+		userName = "error"
+	} else {
+		userName = set.BusinessName
+	}
 
 	// 3. Fetch *active* services for this user
 	services, err := ListServices(uint(userID), true) // true for activeOnly
@@ -67,7 +85,7 @@ func HandleCustomerServiceList(kit *kit.Kit) error {
 			UserName: userName,
 			Error:    "Could not load available services at this time.",
 		}
-		return kit.Render(CustomerServiceList(data)) // Render list view with error
+		return kit.Render(CustomerServiceList(data, kit.Request.Context(), availableLangs, currentLangCode, currentPath))
 	}
 
 	// 4. Prepare data for the template
@@ -78,7 +96,7 @@ func HandleCustomerServiceList(kit *kit.Kit) error {
 	}
 
 	// 5. Render the customer service list view template
-	return kit.Render(CustomerServiceList(data)) // Defined in customer_view.templ
+	return kit.Render(CustomerServiceList(data, kit.Request.Context(), availableLangs, currentLangCode, currentPath)) // Defined in customer_view.templ
 }
 
 // HandleCustomerTimeSlotSelection displays available time slots for a selected service.
@@ -124,7 +142,6 @@ func HandleCustomerTimeSlotSelection(kit *kit.Kit) error {
 
 	// Calculate the week range
 	now := time.Now()
-	fmt.Println(now)
 	weekOffset := 0
 	if offsetStr := kit.Request.URL.Query().Get("week"); offsetStr != "" {
 		weekOffset, _ = strconv.Atoi(offsetStr)
@@ -367,21 +384,26 @@ func HandleCustomerTimeSlotSelection(kit *kit.Kit) error {
 	}
 
 	// Prepare days data
-	for i := 0; i < 7; i++ {
+	for i := range 7 {
 		currentDate := weekStart.AddDate(0, 0, i)
 		dateStr := currentDate.Format("2006-01-02")
 		daySlots := filterSlotsForDate(allSlots, dateStr) // Use filtered slots
+		isHoliday, holiday := calendar.IsFinnishHoliday(currentDate)
 		data.Days = append(data.Days, struct {
-			Date     time.Time
-			DateStr  string
-			DaySlots []TimeSlot
+			Date      time.Time
+			DateStr   string
+			DaySlots  []TimeSlot
+			IsHoliday bool
+			Holiday   calendar.FinnishHoliday
 		}{
-			Date:     currentDate,
-			DateStr:  dateStr,
-			DaySlots: daySlots,
+			Date:      currentDate,
+			DateStr:   dateStr,
+			DaySlots:  daySlots,
+			IsHoliday: isHoliday,
+			Holiday:   holiday,
 		})
 	}
-	return kit.Render(CustomerTimeSlotSelection(data))
+	return kit.Render(CustomerTimeSlotSelection(data, kit.Request.Context()))
 }
 
 // HandleLandingPage displays the landing page for the reservations package
@@ -433,7 +455,7 @@ func HandleDashboard(kit *kit.Kit) error {
 			UserID:   userID,
 			UserName: userEmail,
 			Error:    "Failed to load services",
-		},kit.Request.Context(), availableLangs,currentLangCode,currentPath))
+		}, kit.Request.Context(), availableLangs, currentLangCode, currentPath))
 	}
 
 	// Get user's bookings
@@ -444,7 +466,7 @@ func HandleDashboard(kit *kit.Kit) error {
 			UserID:   userID,
 			UserName: userEmail,
 			Error:    "Failed to load bookings",
-		},kit.Request.Context(), availableLangs,currentLangCode,currentPath))
+		}, kit.Request.Context(), availableLangs, currentLangCode, currentPath))
 	}
 
 	// Calculate stats
@@ -459,8 +481,8 @@ func HandleDashboard(kit *kit.Kit) error {
 	now := time.Now()
 	for _, booking := range bookings {
 		// Parse the booking date and time
-		if booking.Status == "canceled"{
-		fmt.Println(booking.Status)
+		if booking.Status == "canceled" {
+			fmt.Println(booking.Status)
 			continue
 		}
 		bookingDateTime, err := time.Parse("2006-01-02 15:04", fmt.Sprintf("%s %s", booking.TimeSlot.Date, booking.TimeSlot.Time))
@@ -491,7 +513,7 @@ func HandleDashboard(kit *kit.Kit) error {
 		RecentBookings: bookings[:min(10, len(bookings))], // Show only the 10 most recent bookings
 	}
 
-	return kit.Render(DashboardPage(data, kit.Request.Context(), availableLangs,currentLangCode,currentPath))
+	return kit.Render(DashboardPage(data, kit.Request.Context(), availableLangs, currentLangCode, currentPath))
 }
 
 // min returns the smaller of x or y

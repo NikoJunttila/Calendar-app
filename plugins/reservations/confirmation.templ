@@ -2,18 +2,19 @@ package reservations
 
 import (
 	"fmt"
-	"gothstack/app/views/components"
 	"gothstack/app/views/layouts"
+  "context"
+
+	t "gothstack/app/translations"
 )
 
 
 
 // BookingConfirmation displays the booking confirmation form
-templ BookingConfirmation(data BookingConfirmationPageData) {
+templ BookingConfirmation(data BookingConfirmationPageData, ctx context.Context) {
 	@layouts.BaseLayout() {
-		@components.Navigation()
 		<main class="container mx-auto px-4 py-8">
-			<h1 class="text-3xl font-bold mb-6">Confirm Your Booking</h1>
+			<h1 class="text-3xl font-bold mb-6"> {t.T(ctx,"booking_confirmation_title")}</h1>
 			
 			if data.Error != "" {
 				<div class="mb-4 p-3 rounded bg-red-100 text-red-800 border border-red-200">
@@ -27,41 +28,35 @@ templ BookingConfirmation(data BookingConfirmationPageData) {
 			}
 
 			<div class="bg-white p-6 rounded-lg shadow-md mb-6">
-				<h2 class="text-xl font-semibold mb-4">Booking Details</h2>
+				<h2 class="text-xl font-semibold mb-4">{t.T(ctx,"booking_details_title")}</h2>
 				<div class="space-y-4">
 					<div>
-						<label class="block text-sm font-medium text-gray-700">Service</label>
+						<label class="block text-sm font-medium text-gray-700">{t.T(ctx,"service")}</label>
 						<p class="mt-1 text-lg">{ data.Service.Name }</p>
 					</div>
 					<div>
-						<label class="block text-sm font-medium text-gray-700">Date & Time</label>
-						<p class="mt-1 text-lg">{ ConvertDateFormat(data.TimeSlot.Date) } at { data.TimeSlot.Time }</p>
+						<label class="block text-sm font-medium text-gray-700">	{t.T(ctx,"label_date_time")}</label>
+						<p class="mt-1 text-lg">{ ConvertDateFormat(data.TimeSlot.Date) } {t.T(ctx,"label_at")} { data.TimeSlot.Time }</p>
 					</div>
 					if data.Service.Description.Valid {
 						<div>
-							<label class="block text-sm font-medium text-gray-700">Description</label>
+							<label class="block text-sm font-medium text-gray-700">{t.T(ctx,"label_description")}</label>
 							<p class="mt-1 text-lg">{ data.Service.Description.String }</p>
 						</div>
 					}
-					<!--
-          if data.Service.Price.Valid {
-						<div>
-							<label class="block text-sm font-medium text-gray-700">Price</label>
-							<p class="mt-1 text-lg">${ fmt.Sprintf("%.2f", data.Service.Price.Float64) }</p>
-						</div>
-					} -->
+
 				</div>
 			</div>
 
 			<div class="bg-white p-6 rounded-lg shadow-md">
-				<h2 class="text-xl font-semibold mb-4">Your Information</h2>
+				<h2 class="text-xl font-semibold mb-4"> {t.T(ctx,"your_information_title")} </h2>
 				<form method="POST" action={ templ.URL(fmt.Sprintf("/book/%d/service/%d/confirm", data.UserID, data.Service.ID)) } class="space-y-4">
 					<input type="hidden" name="time_slot_id" value={ fmt.Sprintf("%d", data.TimeSlot.ID) }>
 					<input type="hidden" name="date" value={ data.TimeSlot.Date }>
 					<input type="hidden" name="time" value={ data.TimeSlot.Time }>
 					
 					<div>
-						<label class="block text-sm font-medium text-gray-700">Name</label>
+						<label class="block text-sm font-medium text-gray-700">{t.T(ctx,"label_name")}</label>
 						<input type="text" 
 							name="client_name"
 							required
@@ -69,7 +64,7 @@ templ BookingConfirmation(data BookingConfirmationPageData) {
 					</div>
 					
 					<div>
-						<label class="block text-sm font-medium text-gray-700">Email</label>
+						<label class="block text-sm font-medium text-gray-700">{t.T(ctx,"label_email")}</label>
 						<input type="email" 
 							name="client_email"
 							required
@@ -77,14 +72,14 @@ templ BookingConfirmation(data BookingConfirmationPageData) {
 					</div>
 					
 					<div>
-						<label class="block text-sm font-medium text-gray-700">Phone (Optional)</label>
+						<label class="block text-sm font-medium text-gray-700">{t.T(ctx,"label_phone_optional")} </label>
 						<input type="tel" 
 							name="client_phone"
 							class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
 					</div>
 					
 					<div>
-						<label class="block text-sm font-medium text-gray-700">Notes (Optional)</label>
+						<label class="block text-sm font-medium text-gray-700">{t.T(ctx,"label_notes_optional")} </label>
 						<textarea 
 							name="notes"
 							rows="3"
@@ -94,10 +89,10 @@ templ BookingConfirmation(data BookingConfirmationPageData) {
 					<div class="flex justify-end space-x-4">
 						<a href={ templ.URL(fmt.Sprintf("/book/%d/service/%d", data.UserID, data.Service.ID)) } 
 							class="btn btn-secondary">
-							Back
+							{t.T(ctx,"button_back")}
 						</a>
 						<button type="submit" class="btn btn-blue">
-							Confirm Booking
+							{t.T(ctx,"button_confirm_booking")}
 						</button>
 					</div>
 				</form>
@@ -107,9 +102,8 @@ templ BookingConfirmation(data BookingConfirmationPageData) {
 }
 
 // BookingSuccess displays the booking success page
-templ BookingSuccess(data BookingConfirmationPageData) {
+templ BookingSuccess(data BookingConfirmationPageData, ctx context.Context) {
 	@layouts.BaseLayout() {
-		@components.Navigation()
 		<main class="container mx-auto px-4 py-8">
 			<div class="max-w-2xl mx-auto">
 				<div class="text-center mb-8">
@@ -118,7 +112,7 @@ templ BookingSuccess(data BookingConfirmationPageData) {
 					</svg>
 				</div>
 				
-				<h1 class="text-3xl font-bold text-gray-900 mb-4 text-center">Booking Confirmed!</h1>
+				<h1 class="text-3xl font-bold text-gray-900 mb-4 text-center">{t.T(ctx,"booking_success_title")}</h1>
 				
 				<div class="bg-white p-6 rounded-lg shadow-md mb-8">
 					<h2 class="text-xl font-semibold mb-4 text-center">{ data.Service.Name }</h2>
@@ -126,31 +120,32 @@ templ BookingSuccess(data BookingConfirmationPageData) {
 					<div class="border-t border-b py-4 mb-4">
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<div>
-								<h3 class="font-medium text-gray-700">Booking Details</h3>
+								<h3 class="font-medium text-gray-700">{t.T(ctx,"booking_success_details_heading")}</h3>
 								<p class="text-gray-600 mt-2">
-									<span class="font-semibold">Date:</span> { ConvertDateFormat(data.TimeSlot.Date) }
+									<span class="font-semibold">{t.T(ctx,"label_booking_date")}</span> { ConvertDateFormat(data.TimeSlot.Date) }
 								</p>
 								<p class="text-gray-600">
-									<span class="font-semibold">Time:</span> { data.TimeSlot.Time }
+									<span class="font-semibold">{t.T(ctx,"label_booking_time")}</span> { data.TimeSlot.Time }
 								</p>
 								<p class="text-gray-600">
-									<span class="font-semibold">Duration:</span> { fmt.Sprintf("%d minutes", data.TimeSlot.Duration) }
+									<span class="font-semibold">{t.T(ctx,"label_booking_duration")}</span> { fmt.Sprintf("%d minutes", data.TimeSlot.Duration) }
 								</p>
 								<p class="text-gray-600">
-									<span class="font-semibold">Booking Reference:</span> { data.Booking.BookingRef }
+									<span class="font-semibold">{t.T(ctx,"label_booking_reference")}</span> { data.Booking.BookingRef }
 								</p>
 							</div>
 							<div>
-								<h3 class="font-medium text-gray-700">Client Information</h3>
+								<h3 class="font-medium text-gray-700">{t.T(ctx,"client_information_heading")}</h3>
 								<p class="text-gray-600 mt-2">
-									<span class="font-semibold">Name:</span> { data.Booking.ClientName }
+									<span class="font-semibold">{t.T(ctx,"label_client_name")}</span> { data.Booking.ClientName }
 								</p>
 								<p class="text-gray-600">
-									<span class="font-semibold">Email:</span> { data.Booking.ClientEmail }
+									<span class="font-semibold">{t.T(ctx,"label_client_email")}</span> { data.Booking.ClientEmail }
 								</p>
 								if data.Booking.ClientPhone != "" {
 									<p class="text-gray-600">
-										<span class="font-semibold">Phone:</span> { data.Booking.ClientPhone }
+										<span class="font-semibold">{t.T(ctx,"label_client_phone")}</span>
+									{data.Booking.ClientPhone}
 									</p>
 								}
 							</div>
@@ -159,17 +154,17 @@ templ BookingSuccess(data BookingConfirmationPageData) {
 					
 					if data.Booking.Notes != "" {
 						<div class="mb-4">
-							<h3 class="font-medium text-gray-700 mb-2">Notes</h3>
+							<h3 class="font-medium text-gray-700 mb-2">{t.T(ctx,"notes_heading")}</h3>
 							<p class="text-gray-600 bg-gray-50 p-3 rounded">{ data.Booking.Notes }</p>
 						</div>
 					}
 					
-					<p class="text-green-600 font-medium my-4 text-center">{ data.Success }</p>
+					<p class="text-green-600 font-medium my-4 text-center">{ t.T(ctx,"success_message")}</p>
 					
 					<div class="mt-6 flex justify-center">
 						<a href={ templ.URL(fmt.Sprintf("/book/%d", data.Booking.UserID)) } 
 							class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-							Book Another Service
+							{t.T(ctx,"button_back_to_services")}
 						</a>
 					</div>
 				</div>

@@ -142,6 +142,12 @@ templ SettingsForm(data SettingsFormData) {
 				</div>
 			}
 			<form method="POST" action="/reservations/settings" class="space-y-6 bg-white p-6 rounded-lg shadow">
+					<div class="form-control">
+						<label class="label cursor-pointer justify-start gap-2">
+							<span class="label-text">Business name: </span>
+							<input type="text" id="business_name" name="business_name" value={data.Setting.BusinessName} class="bg-gray-300 ml-2 pd-2" />
+						</label>
+					</div>
 				// Timezone (Consider using a select with common timezones)
 				<div class="form-control">
 					<label for="timezone" class="label">

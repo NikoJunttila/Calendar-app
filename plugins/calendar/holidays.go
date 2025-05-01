@@ -1,6 +1,8 @@
 package calendar
 
-import "time"
+import (
+	"time"
+)
 
 // FinnishHoliday represents a public holiday in Finland
 type FinnishHoliday struct {
@@ -50,8 +52,9 @@ func GetFinnishHolidays(year int) []FinnishHoliday {
 		Description: "Vappu",
 	})
 
+	midsummerDateEve := calculateMidsummerEveDate(year)
 	holidays = append(holidays, FinnishHoliday{
-		Date:        time.Date(year, time.June, 24, 0, 0, 0, 0, time.Local), // Midsummer's Eve falls on different dates, this is a simplification
+		Date:        	midsummerDateEve, // Midsummer's Eve falls on different dates, this is a simplification
 		Name:        "Midsummer's Eve",
 		Description: "Juhannusaatto",
 	})
@@ -163,6 +166,14 @@ func calculateMidsummerDate(year int) time.Time {
 	// Find the next Saturday
 	daysUntilSaturday := (int(time.Saturday) - int(date.Weekday()) + 7) % 7
 	return date.AddDate(0, 0, daysUntilSaturday)
+}
+func calculateMidsummerEveDate(year int) time.Time {
+	// Start with June 20
+	date := time.Date(year, time.June, 20, 0, 0, 0, 0, time.Local)
+
+	// Find the next Saturday
+	daysUntilSaturday := (int(time.Saturday) - int(date.Weekday()) + 7) % 7
+	return date.AddDate(0, 0, daysUntilSaturday - 1)
 }
 
 // calculateAllSaintsDate calculates All Saints' Day for a given year
