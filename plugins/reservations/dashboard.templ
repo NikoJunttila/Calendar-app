@@ -1,11 +1,11 @@
 package reservations
 
 import (
+	"context"
 	"fmt"
+	t "gothstack/app/translations"
 	"gothstack/app/views/components"
 	"gothstack/app/views/layouts"
-	t "gothstack/app/translations"
-  "context"
 )
 
 // DashboardPageData holds data for the dashboard page
@@ -19,7 +19,7 @@ type DashboardPageData struct {
 		UpcomingBookings int
 	}
 	RecentBookings []Booking
-    Error string
+	Error          string
 }
 
 // DashboardPage displays the main dashboard for managing reservation settings
@@ -30,31 +30,29 @@ templ DashboardPage(data DashboardPageData, ctx context.Context, languages map[s
 			<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 				<!-- Welcome Section -->
 				<div class="mb-8">
-					<h1 class="text-2xl font-semibold text-gray-900">{t.T(ctx,"welcome_back")}, { data.UserName }</h1>
+					<h1 class="text-2xl font-semibold text-gray-900">{ t.T(ctx,"welcome_back") }, { data.UserName }</h1>
 					<p class="mt-1 text-sm text-gray-500">Manage your services, bookings, and settings all in one place.</p>
-		</div>
-            	<div class="language-selector mb-4">
-			<select
-				name="lang"
-				class="p-2 border rounded bg-white"
-				hx-get={ string(templ.URL(currentPath)) }
-				hx-trigger="change"
-				hx-target="body"
-				hx-swap="outerHTML"
-				hx-push-url="true"
-			>
-				for _, lang := range languages {
-					<option
-						value={ lang.Code }
-						selected?={ lang.Code == currentLangCode }
-					>
-						{ lang.Name }
-					</option>
-				}
-			</select>
-
 				</div>
-
+				<div class="language-selector mb-4">
+					<select
+						name="lang"
+						class="p-2 border rounded bg-white"
+						hx-get={ string(templ.URL(currentPath)) }
+						hx-trigger="change"
+						hx-target="body"
+						hx-swap="outerHTML"
+						hx-push-url="true"
+					>
+						for _, lang := range languages {
+							<option
+								value={ lang.Code }
+								selected?={ lang.Code == currentLangCode }
+							>
+								{ lang.Name }
+							</option>
+						}
+					</select>
+				</div>
 				<!-- Stats Grid -->
 				<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
 					<div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
@@ -74,7 +72,6 @@ templ DashboardPage(data DashboardPageData, ctx context.Context, languages map[s
 						<dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{ fmt.Sprintf("%d", data.Stats.UpcomingBookings) }</dd>
 					</div>
 				</div>
-
 				<!-- Quick Actions -->
 				<div class="mt-8">
 					<h2 class="text-lg font-medium leading-6 text-gray-900">Quick Actions</h2>
@@ -82,7 +79,7 @@ templ DashboardPage(data DashboardPageData, ctx context.Context, languages map[s
 						<a href="/reservations/services/create" class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm hover:border-gray-400">
 							<div class="flex-shrink-0">
 								<svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+									<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path>
 								</svg>
 							</div>
 							<div class="min-w-0 flex-1">
@@ -91,11 +88,10 @@ templ DashboardPage(data DashboardPageData, ctx context.Context, languages map[s
 								<p class="truncate text-sm text-gray-500">Add a new service to your booking page</p>
 							</div>
 						</a>
-
 						<a href={ templ.URL(fmt.Sprintf("/book/%d", data.UserID)) } target="_blank" class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm hover:border-gray-400">
 							<div class="flex-shrink-0">
 								<svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.171-.879-1.172-2.303 0-3.182C10.536 7.719 11.768 7.5 13 7.5c1.725 0 3.45.22 4.003.659" />
+									<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.171-.879-1.172-2.303 0-3.182C10.536 7.719 11.768 7.5 13 7.5c1.725 0 3.45.22 4.003.659"></path>
 								</svg>
 							</div>
 							<div class="min-w-0 flex-1">
@@ -104,11 +100,10 @@ templ DashboardPage(data DashboardPageData, ctx context.Context, languages map[s
 								<p class="truncate text-sm text-gray-500">Share your booking link with customers</p>
 							</div>
 						</a>
-
 						<a href="/reservations/business-hours" class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm hover:border-gray-400">
 							<div class="flex-shrink-0">
 								<svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+									<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 								</svg>
 							</div>
 							<div class="min-w-0 flex-1">
@@ -117,12 +112,35 @@ templ DashboardPage(data DashboardPageData, ctx context.Context, languages map[s
 								<p class="truncate text-sm text-gray-500">Configure your working hours and availability</p>
 							</div>
 						</a>
-
+						<a href="/reservations/services" class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm hover:border-gray-400">
+							<div class="flex-shrink-0">
+								<svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+								</svg>
+							</div>
+							<div class="min-w-0 flex-1">
+								<span class="absolute inset-0" aria-hidden="true"></span>
+								<p class="text-sm font-medium text-gray-900">View and edit services</p>
+							</div>
+						</a>
+						<a href="/reservations/special-dates" class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm hover:border-gray-400">
+							<div class="flex-shrink-0">
+								<svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a6.759 6.759 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"></path>
+									<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+								</svg>
+							</div>
+							<div class="min-w-0 flex-1">
+								<span class="absolute inset-0" aria-hidden="true"></span>
+								<p class="text-sm font-medium text-gray-900">Set days off</p>
+								<p class="truncate text-sm text-gray-500">Configure days off for special dates or holidays</p>
+							</div>
+						</a>
 						<a href="/reservations/settings" class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm hover:border-gray-400">
 							<div class="flex-shrink-0">
 								<svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a6.759 6.759 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
-									<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+									<path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a6.759 6.759 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"></path>
+									<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
 								</svg>
 							</div>
 							<div class="min-w-0 flex-1">
@@ -133,7 +151,6 @@ templ DashboardPage(data DashboardPageData, ctx context.Context, languages map[s
 						</a>
 					</div>
 				</div>
-
 				<!-- Recent Bookings -->
 				<div class="mt-8">
 					<div class="sm:flex sm:items-center">
@@ -185,4 +202,4 @@ templ DashboardPage(data DashboardPageData, ctx context.Context, languages map[s
 			</div>
 		</main>
 	}
-} 
+}

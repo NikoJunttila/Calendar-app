@@ -1,14 +1,11 @@
 package reservations
 
 import (
-	"fmt"
+	"context"
 	"gothstack/app/views/components"
 	"gothstack/app/views/layouts"
-	"context"
-	t "gothstack/app/translations"
 )
 
-// LandingPageData holds data for the landing page
 type LandingPageData struct {
 	Features []struct {
 		Title       string
@@ -17,82 +14,50 @@ type LandingPageData struct {
 	}
 }
 
-// LandingPage displays the landing page for the reservations package
 templ LandingPage(ctx context.Context, data LandingPageData) {
 	@layouts.BaseLayout() {
 		@components.Navigation()
 		<main>
-			<!-- Hero Section -->
-			<div class="relative isolate overflow-hidden bg-gradient-to-b from-blue-100/20">
-				<div class="mx-auto max-w-7xl pb-24 pt-10 sm:pb-32 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:px-8 lg:py-40">
-					<div class="px-6 lg:px-0 lg:pt-4">
-						<div class="mx-auto max-w-2xl">
-							<div class="max-w-lg">
-								<h1 class="mt-10 text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
-									Streamline Your Scheduling
-									{t.T(ctx, "greeting")}
-								</h1>
-								<p class="mt-6 text-lg leading-8 text-gray-600">
-									Create and manage your availability slots with ease. Let your clients book appointments online, 24/7.
-								</p>
-								<div class="mt-10 flex items-center gap-x-6">
-									<a href="/auth/register" class="rounded-md bg-blue-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
-										Get Started
-									</a>
-									<a href="#features" class="text-sm font-semibold leading-6 text-gray-900">
-										Learn more <span aria-hidden="true">→</span>
-									</a>
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="mt-20 sm:mt-24 md:mx-auto md:max-w-2xl lg:mx-0 lg:mt-0 lg:w-screen">
-						<div class="absolute inset-y-0 right-6 -z-10 -mr-10 w-[200%] skew-x-[-30deg] bg-white shadow-xl ring-1 ring-gray-900/10 md:-mr-20 lg:-mr-6" aria-hidden="true"></div>
-						<div class="shadow-lg md:rounded-3xl">
-							<div class="bg-blue-500 [clip-path:inset(0)] md:[clip-path:inset(0_round_theme(borderRadius.3xl))]">
-								<div class="absolute -inset-y-px left-1/2 -z-10 ml-10 w-[200%] skew-x-[-30deg] bg-blue-500 opacity-20 ring-1 ring-inset ring-white md:ml-20 lg:ml-6" aria-hidden="true"></div>
-								<div class="relative px-6 pt-8 sm:pt-16 md:pl-16 md:pr-0">
-									<div class="mx-auto max-w-2xl md:mx-0 md:max-w-none">
-										<div class="w-screen overflow-hidden rounded-tl-xl bg-gray-900">
-											<div class="flex bg-gray-800/40 ring-1 ring-white/5">
-												<div class="-mb-px flex text-sm font-medium leading-6 text-gray-400">
-													<div class="border-b border-r border-b-white/20 border-r-white/10 bg-white/5 px-4 py-2 text-white">
-														AppointmentView.js
-													</div>
-													<div class="border-r border-gray-600/10 px-4 py-2">CalendarView.js</div>
-												</div>
-											</div>
-											<div class="px-6 pt-6 pb-14">
-												<!-- Calendar Preview -->
-												<div class="grid grid-cols-7 gap-1 text-center text-xs">
-													<div class="text-gray-400">Sun</div>
-													<div class="text-gray-400">Mon</div>
-													<div class="text-gray-400">Tue</div>
-													<div class="text-gray-400">Wed</div>
-													<div class="text-gray-400">Thu</div>
-													<div class="text-gray-400">Fri</div>
-													<div class="text-gray-400">Sat</div>
-												</div>
-												<div class="mt-2 grid grid-cols-7 gap-1">
-													for i := 1; i <= 31; i++ {
-														<div class={ templ.KV("bg-blue-500/20 text-blue-200", i == 15) } class={ templ.KV("bg-gray-800/50 text-gray-400", i != 15) } class="aspect-square flex items-center justify-center rounded-lg text-sm">
-															{ fmt.Sprintf("%d", i) }
-														</div>
-													}
-												</div>
-											</div>
-										</div>
-									</div>
-								</div>
-								<div class="absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-t from-white sm:h-32"></div>
-							</div>
-						</div>
-					</div>
-				</div>
+
+<!-- Hero Section -->
+<section class="relative isolate overflow-hidden bg-gradient-to-br py-16 from-blue-50 to-white">
+	<!-- Decorative Background SVG -->
+	<div class="absolute inset-x-0 top-[-10rem] -z-10 transform-gpu overflow-hidden blur-3xl">
+		<svg class="relative left-[calc(50%-11rem)] h-[21.1875rem] max-w-none -translate-x-1/2 sm:left-[calc(50%-30rem)] sm:h-[42.375rem]" viewBox="0 0 1155 678" fill="none">
+			<path fill="url(#gradient1)" fill-opacity=".3" d="M317 0L0 317l317 317h521V0H317Z" />
+			<defs>
+				<linearGradient id="gradient1" x1="0" y1="0" x2="1155" y2="678" gradientUnits="userSpaceOnUse">
+					<stop stop-color="#60a5fa" />
+					<stop offset="1" stop-color="#a78bfa" />
+				</linearGradient>
+			</defs>
+		</svg>
+	</div>
+
+	<div class="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:flex lg:items-center lg:justify-between lg:px-8">
+		<div class="max-w-2xl mx-auto">
+			<h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+				Your Time, Organized Effortlessly
+			</h1>
+			<p class="mt-6 text-lg leading-8 text-gray-700">
+				Simplify your scheduling. Define availability, accept bookings online, and reduce no-shows — all without the back-and-forth.
+			</p>
+			<div class="mt-10 flex items-center gap-x-6">
+				<a href="/auth/register" class="rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+					Get Started
+				</a>
+				<a href="#features" class="text-sm font-semibold leading-6 text-blue-700 hover:text-blue-900">
+					Learn more <span aria-hidden="true">→</span>
+				</a>
 			</div>
+		</div>
+
+	</div>
+</section>
+
 
 			<!-- Feature Section -->
-			<div id="features" class="mx-auto mt-32 max-w-7xl px-6 sm:mt-56 lg:px-8">
+			<div id="features" class="mx-auto max-w-7xl px-6 mt-16 lg:px-8">
 				<div class="mx-auto max-w-2xl lg:text-center">
 					<h2 class="text-base font-semibold leading-7 text-blue-600">Faster Scheduling</h2>
 					<p class="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
@@ -108,7 +73,7 @@ templ LandingPage(ctx context.Context, data LandingPageData) {
 							<div class="flex flex-col">
 								<dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
 									<svg class="h-5 w-5 flex-none text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-										<path fill-rule="evenodd" d={ feature.Icon } clip-rule="evenodd" />
+										<path fill-rule="evenodd" d={ feature.Icon } clip-rule="evenodd"></path>
 									</svg>
 									{ feature.Title }
 								</dt>
@@ -120,7 +85,6 @@ templ LandingPage(ctx context.Context, data LandingPageData) {
 					</dl>
 				</div>
 			</div>
-
 			<!-- CTA Section -->
 			<div class="relative isolate mt-32 px-6 py-32 sm:mt-56 sm:py-40 lg:px-8">
 				<div class="absolute inset-x-0 top-1/2 -z-10 -translate-y-1/2 transform-gpu overflow-hidden opacity-30 blur-3xl" aria-hidden="true">
@@ -141,9 +105,6 @@ templ LandingPage(ctx context.Context, data LandingPageData) {
 							Sign in <span aria-hidden="true">→</span>
 						</a>
 					</div>
-				</div>
-				<div class="absolute left-1/2 top-0 -z-10 -translate-x-1/2 transform-gpu overflow-hidden opacity-30 blur-3xl" aria-hidden="true">
-					<div class="ml-[max(50%,38rem)] aspect-[1313/771] w-[82.125rem] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc]" style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)"></div>
 				</div>
 			</div>
 		</main>

@@ -36,7 +36,7 @@
   "label_name": "Nimi",
   "label_email": "Sähköposti",
   "label_phone_optional": "Puhelin (valinnainen)",
-  "label_notes_optional": "Muistiinpanot (valinnainen)",
+  "label_notes_optional": "Extra tietoa varaukseen liittyen (valinnainen)",
   "button_back": "Takaisin",
   "button_confirm_booking": "Vahvista varaus",
 

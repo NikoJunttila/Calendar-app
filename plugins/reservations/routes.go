@@ -42,10 +42,6 @@ func InitRoutes(router chi.Router, authConfig kit.AuthenticationConfig) {
 		// auth.Get("/reservations/book/{slotID}", kit.Handler(HandleBookingCreateForm)) // Needs handler
 		// auth.Post("/reservations/book/{slotID}", kit.Handler(HandleBookingCreatePost)) // Needs handler
 
-		// Example route for handling the cancellation action (could be POST or DELETE)
-		// auth.Post("/reservations/bookings/{bookingID}/cancel", kit.Handler(HandleBookingCancel)) // Needs handler
-		// auth.Delete("/reservations/bookings/{bookingID}", kit.Handler(HandleBookingCancel)) // Alternative method
-
 		auth.Get("/reservations/business-hours", kit.Handler(HandleBusinessHoursView))
 		auth.Post("/reservations/business-hours", kit.Handler(HandleBusinessHoursUpdate))
 

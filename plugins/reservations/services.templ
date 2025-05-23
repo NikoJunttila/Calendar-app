@@ -75,7 +75,7 @@ templ ServiceList(data ServicePageData) {
 												} else {
 													<div class="w-4 h-4 rounded-full bg-gray-300"></div>
 												}
-												<span class="font-medium text-gray-900">{ service.Name }</span>
+												<span class="font-medium text-gray-900">{ service.Name } id: {fmt.Sprint(service.ID)}</span>
 											</div>
 										</td>
 										<td class="px-6 py-4 whitespace-nowrap text-gray-700">

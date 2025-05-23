@@ -65,10 +65,11 @@ func HandleCustomerServiceList(kit *kit.Kit) error {
 		// You might want a dedicated error page template later.
 		return kit.Render(CustomerServiceList(data, kit.Request.Context(), availableLangs, currentLangCode, currentPath))
 	}
+	query := kit.Request.URL.Query()
+	serviceIDparams := query["id"]
 
-	// 2. Fetch user details (Optional - Placeholder)
-	// TODO: Fetch user's public/business name from your auth/user system if needed.
-	set, err := GetSettings(uint(userID)) // Placeholder
+	// 2. Fetch user details
+	set, err := GetSettings(uint(userID))
 	var userName string
 	if err != nil {
 		userName = "error"
@@ -86,6 +87,26 @@ func HandleCustomerServiceList(kit *kit.Kit) error {
 			Error:    "Could not load available services at this time.",
 		}
 		return kit.Render(CustomerServiceList(data, kit.Request.Context(), availableLangs, currentLangCode, currentPath))
+	}
+	fmt.Println(serviceIDparams)
+	if len(serviceIDparams) > 0 {
+		var newServices []Service
+		for _, sId := range serviceIDparams {
+			id, err := strconv.ParseUint(sId, 10, 64)
+			if err != nil {
+				fmt.Println("error: ", err)
+			}
+			for _, serv := range services {
+				fmt.Println(serv.ID)
+				if serv.ID == uint(id) {
+					fmt.Println("appending serv")
+					newServices = append(newServices, serv)
+				}
+			}
+		}
+		services = newServices
+		fmt.Println("services: ", services)
+		fmt.Println("new services: ", newServices)
 	}
 
 	// 4. Prepare data for the template
