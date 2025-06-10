@@ -54,5 +54,8 @@
   "notes_heading": "Extra tietoa varausta varten",
   "success_message": "Varauksesi on vahvistettu! Saat vahvistussähköpostin pian.",
   "button_back_to_services": "Takaisin palveluihin",
-  "closed_for":"Suljettu pyhäinpäivää varten "
+  "closed_for":"Suljettu pyhäinpäivää varten ",
+  "customer_title":"Tervetuloa varaamaan aika hoidoille ja palveluille!",
+  "customer_smaller_title":"Osta palvelu etukäteen kaupasta.",
+  "cancellation":"Ajanvarauksen peruutus: Alle 24 tuntia peruutettu ajanvaraus - veloitetaan ajanvarauksesta normaali hoitohinta. Peruutukset tulee siis tehdä 24 h ennen varattua aikaa."
 }

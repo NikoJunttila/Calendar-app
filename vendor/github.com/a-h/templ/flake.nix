@@ -2,10 +2,14 @@
   description = "templ";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     gitignore = {
       url = "github:hercules-ci/gitignore.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    version = {
+      url = "github:a-h/version/0.0.8";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     xc = {
@@ -14,7 +18,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, gitignore, xc }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, gitignore, version, xc }:
     let
       allSystems = [
         "x86_64-linux" # 64-bit Intel/AMD Linux
@@ -33,12 +37,14 @@
         rec {
           default = templ;
 
-          templ = pkgs.buildGo123Module {
+          templ = pkgs.buildGo124Module {
             name = "templ";
             subPackages = [ "cmd/templ" ];
             src = gitignore.lib.gitignoreSource ./.;
-            vendorHash = "sha256-OPADot7Lkn9IBjFCfbrqs3es3F6QnWNjSOHxONjG4MM=";
-            CGO_ENABLED = 0;
+            vendorHash = "sha256-q4L+r6S0eMNd5hP9UQCI+GxSJoiMGpjd0UTxA8zb6KU=";
+            env = {
+              CGO_ENABLED = 0;
+            };
             flags = [
               "-trimpath"
             ];
@@ -63,6 +69,7 @@
             pkgs.gotestsum
             pkgs.ko # Used to build Docker images.
             pkgs.nodejs # Used to build templ-docs.
+            version.packages.${system}.default # Used to apply version numbers to the repo.
             xc.packages.${system}.xc
           ];
         });

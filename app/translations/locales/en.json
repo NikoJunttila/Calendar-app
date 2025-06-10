@@ -52,5 +52,8 @@
   "notes_heading": "Notes",
   "success_message": "Your booking has been confirmed! You will receive a confirmation email shortly.",
   "button_back_to_services": "Back to Services",
-  "closed_for":"Closed for a holiday"
+  "closed_for":"Closed for a holiday",
+  "customer_title":"Welcome to book an appointment for treatments and services!",
+  "customer_smaller_title":"Buy the service in advance from the shop.",
+  "cancellation":"Cancellation of an appointment: cancelled appointment less than 24 hours - the appointment will be charged at the normal treatment rate. Cancellations must therefore be made 24 hours before the booked time."
 }
