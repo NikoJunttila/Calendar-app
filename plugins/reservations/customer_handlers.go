@@ -54,6 +54,7 @@ func HandleCustomerServiceList(kit *kit.Kit) error {
 		}
 	}
 	availableLangs := translations.M.GetLanguages()
+
 	currentPath := kit.Request.URL.Path
 
 	userIDStr := chi.URLParam(kit.Request, "userID")
@@ -88,7 +89,6 @@ func HandleCustomerServiceList(kit *kit.Kit) error {
 		}
 		return kit.Render(CustomerServiceList(data, kit.Request.Context(), availableLangs, currentLangCode, currentPath))
 	}
-	fmt.Println(serviceIDparams)
 	if len(serviceIDparams) > 0 {
 		var newServices []Service
 		for _, sId := range serviceIDparams {

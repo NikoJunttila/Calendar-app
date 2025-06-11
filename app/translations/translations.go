@@ -149,21 +149,6 @@ func (m *Manager) Middleware(next http.Handler) http.Handler {
 				langCode = cookie.Value
 			}
 		}
-
-		// If no cookie, check Accept-Language header
-		if langCode == "" {
-			acceptLang := r.Header.Get("Accept-Language")
-			if acceptLang != "" {
-				// Take the first language code
-				langCodes := strings.Split(acceptLang, ",")
-				if len(langCodes) > 0 {
-					// Extract language code (e.g., "en" from "en-US")
-					parts := strings.Split(langCodes[0], "-")
-					langCode = strings.ToLower(parts[0])
-				}
-			}
-		}
-
 		// Validate language code
 		if _, exists := m.languages[langCode]; !exists {
 			langCode = m.defaultLang
