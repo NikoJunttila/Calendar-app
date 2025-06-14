@@ -341,6 +341,7 @@ func GenerateTimeSlotsFromBusinessHours(userID uint, serviceID uint, startDate, 
 
 	// 2. Get special dates that might override business hours
 	specialDates, err := GetSpecialDates(userID)
+	fmt.Println(specialDates)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get special dates: %w", err)
 	}
