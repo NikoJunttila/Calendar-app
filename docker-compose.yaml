@@ -1,28 +1,15 @@
+
 services:
   calendar:
-    # --- RECOMMENDED CHANGE ---
-    # Instead of pulling an image, tell Compose how to build it.
-    # It will look for a Dockerfile in the same directory as this file.
-    # You can now remove or comment out the old `image` line.
-    # image: ghcr.io/nikojunttila/calendar:latest
-
-    # --- OPTIONAL: If you build manually first with `docker build -t calendar .` ---
-    # If you prefer to build the image yourself first, you would use this line instead of the `build:` block:
-    image: calendar:latest
-
+    build: .
     container_name: calendar
     restart: unless-stopped
     ports:
-      # This is still correct. It exposes the container's port to the host
-      # so Nginx can proxy requests to it.
       - "5000:7331"
     volumes:
-      # This is correct and ensures your SQLite data is persistent.
       - calendar-data:/app/data
     env_file:
-      # This correctly loads your .env file.
       - .env
-    # This section is also fine to keep for overriding or ensuring variables are set.
     environment:
       - HTTP_LISTEN_ADDR=:7331
       - DB_DRIVER=sqlite3
@@ -30,18 +17,7 @@ services:
       - MIGRATION_DIR=migrations
       - LOCALE_DIR=/app/translations/locales
 
-    # --- REMOVED ---
-    # The dedicated network for the Cloudflare tunnel is no longer needed.
-    # networks:
-    #   - app-network
-
 volumes:
-  # This correctly defines the named volume for your data.
   calendar-data:
     driver: local
 
-# --- REMOVED ---
-# The external network definition is no longer needed.
-# networks:
-#   app-network:
-#     external: true
