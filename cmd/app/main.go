@@ -26,11 +26,11 @@ func main() {
 		router.Handle("/public/*", staticProd())
 	}
 
-	kit.UseErrorHandler(app.ErrorHandler)
-	router.HandleFunc("/*", kit.Handler(app.NotFoundHandler))
-
 	app.InitializeRoutes(router)
 	app.RegisterEvents()
+	
+	kit.UseErrorHandler(app.ErrorHandler)
+	router.HandleFunc("/*", kit.Handler(app.NotFoundHandler))
 
 	listenAddr := os.Getenv("HTTP_LISTEN_ADDR")
 	// In development link the full Templ proxy url.
@@ -40,7 +40,6 @@ func main() {
 	}
 
 	fmt.Printf("application running in %s at %s\n", kit.Env(), url)
-	// reservations.SetupCron()
 
 	http.ListenAndServe(listenAddr, router)
 }
