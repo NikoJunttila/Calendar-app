@@ -1,12 +1,14 @@
 package reservations
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
 	"gothstack/plugins/auth"
+
 	"github.com/anthdm/superkit/kit"
 	"github.com/go-chi/chi/v5"
 )
@@ -92,6 +94,7 @@ func HandleSpecialDateDelete(kit *kit.Kit) error {
 	userID := kit.Auth().(auth.Auth).UserID
 
 	specialDateIDStr := chi.URLParam(kit.Request, "id")
+	fmt.Println(specialDateIDStr)
 	specialDateID, err := strconv.ParseUint(specialDateIDStr, 10, 32)
 	if err != nil {
 		slog.Error("Failed to parse special date ID", "id", specialDateIDStr, "err", err)
