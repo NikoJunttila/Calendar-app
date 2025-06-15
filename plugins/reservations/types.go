@@ -848,6 +848,16 @@ func DeleteSpecialDate(userID uint, dateStr string) error {
 	}
 	return nil
 }
+func DeleteSpecialDateID(userID uint, id uint64) error {
+	result := db.Get().Where("user_id = ? AND id = ?", userID, id).Delete(&SpecialDate{})
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete special date for user %d, date %d: %w", userID, id, result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("special date not found for user %d, id %d", userID, id)
+	}
+	return nil
+}
 
 // --- Webhook CRUD ---
 

@@ -1,15 +1,14 @@
 package reservations
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
 	"gothstack/plugins/auth"
-
 	"github.com/anthdm/superkit/kit"
+	"github.com/go-chi/chi/v5"
 )
 
 // HandleSpecialDateView displays the special dates settings form
@@ -92,8 +91,7 @@ func HandleSpecialDateCreate(kit *kit.Kit) error {
 func HandleSpecialDateDelete(kit *kit.Kit) error {
 	userID := kit.Auth().(auth.Auth).UserID
 
-	// Get special date ID from URL
-	specialDateIDStr := kit.Request.URL.Path[len("/reservations/special-dates/"):]
+	specialDateIDStr := chi.URLParam(kit.Request, "id")
 	specialDateID, err := strconv.ParseUint(specialDateIDStr, 10, 32)
 	if err != nil {
 		slog.Error("Failed to parse special date ID", "id", specialDateIDStr, "err", err)
@@ -101,7 +99,7 @@ func HandleSpecialDateDelete(kit *kit.Kit) error {
 	}
 
 	// Delete the special date
-	err = DeleteSpecialDate(uint(specialDateID), fmt.Sprintf("%d", userID))
+	err = DeleteSpecialDateID(uint(userID), specialDateID)
 	if err != nil {
 		slog.Error("Failed to delete special date",
 			"userID", userID,

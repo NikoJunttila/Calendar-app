@@ -3,13 +3,12 @@ services:
     # --- RECOMMENDED CHANGE ---
     # Instead of pulling an image, tell Compose how to build it.
     # It will look for a Dockerfile in the same directory as this file.
-    build: .
     # You can now remove or comment out the old `image` line.
     # image: ghcr.io/nikojunttila/calendar:latest
 
     # --- OPTIONAL: If you build manually first with `docker build -t calendar .` ---
     # If you prefer to build the image yourself first, you would use this line instead of the `build:` block:
-    # image: calendar:latest
+    image: calendar:latest
 
     container_name: calendar
     restart: unless-stopped
