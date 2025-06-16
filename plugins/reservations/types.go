@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gothstack/app/db"       // Added for database access
 	"gothstack/plugins/auth" // Added for User relation
+	"math"
 	"time"
 
 	"gorm.io/gorm" // Uncommented for GORM operations
@@ -420,49 +421,86 @@ func GenerateTimeSlotsFromBusinessHours(userID uint, serviceID uint, startDate, 
 }
 
 // ListAvailableTimeSlotsForService retrieves available time slots for a service,
-// taking into account business hours and existing bookings.
+// taking into account business hours and existing bookings that may span
+// multiple 30-minute intervals.
 func ListAvailableTimeSlotsForService(userID uint, serviceID uint, startDate, endDate time.Time) ([]TimeSlot, error) {
-	// 1. Get the service to check duration
+	// Step 1: Get the details of the service being booked. This is mainly to get
+	// the default duration for generating the initial list of potential time slots.
 	service, err := GetService(serviceID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get service details: %w", err)
 	}
 
-	// 2. Generate potential time slots based on business hours
+	// Step 2: Generate a complete list of all possible 30-minute time slots within the
+	// business hours for the given date range. This is our starting list of "potentials".
 	slots, err := GenerateTimeSlotsFromBusinessHours(userID, serviceID, startDate, endDate, service.Duration)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate time slots: %w", err)
 	}
 
-	// 3. Get existing bookings to filter out unavailable slots
-	var existingSlots []TimeSlot
+	// Step 3: Fetch all existing bookings from the database that fall within the requested
+	// date range. These will be used to block out time in our list of potential slots.
+	var existingBookings []TimeSlot
 	err = db.Get().
 		Where("user_id = ? AND date BETWEEN ? AND ? AND is_booked = ?",
 			userID,
 			startDate.Format("2006-01-02"),
 			endDate.Format("2006-01-02"),
 			true).
-		Find(&existingSlots).Error
+		Find(&existingBookings).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to check existing bookings: %w", err)
 	}
 
-	// Create a map of booked slots for efficient lookup
+	// Step 4: Create a lookup map (hash map) for quick checking of booked slots.
+	// This is where the core logic for handling multi-slot bookings resides.
 	bookedSlots := make(map[string]bool)
-	for _, slot := range existingSlots {
-		key := fmt.Sprintf("%s-%s", slot.Date, slot.Time)
-		bookedSlots[key] = true
+	for _, booking := range existingBookings {
+		// 4a. Parse the start date and time of the existing booking into a `time.Time` object.
+		// A consistent layout string is crucial for correct parsing.
+		layout := "2006-01-02-15:04" // Layout for "YYYY-MM-DD-HH:MM"
+		startTime, err := time.Parse(layout, fmt.Sprintf("%s-%s", booking.Date, booking.Time))
+		if err != nil {
+			// If a booking has an invalid time format, log it and skip it
+			// to prevent the entire process from failing.
+			fmt.Printf("warning: could not parse time for booking, skipping: %v\n", err)
+			continue
+		}
+
+		// 4b. Calculate how many 30-minute slots this single booking occupies.
+		// `booking.Duration` comes from the existing booking record.
+		// We use `math.Ceil` to ensure that even partial slots are fully blocked.
+		// For example, a 65-minute service (65 / 30.0 = 2.16) will correctly
+		// block three 30-minute slots.
+		durationInMinutes := booking.Duration
+		slotsToBlock := int(math.Ceil(float64(durationInMinutes) / 30.0))
+
+		// 4c. Loop for the number of slots that need to be blocked and mark each one.
+		for i := 0; i < slotsToBlock; i++ {
+			// Calculate the start time of the current 30-minute interval within the booking.
+			slotTime := startTime.Add(time.Duration(i*30) * time.Minute)
+
+			// Generate a unique key for the map (e.g., "2023-10-27-10:30").
+			key := fmt.Sprintf("%s-%s", slotTime.Format("2006-01-02"), slotTime.Format("15:04"))
+			// Add the key to the map. The value `true` indicates it's booked.
+			bookedSlots[key] = true
+		}
 	}
 
-	// Filter out booked slots
+	// Step 5: Filter the initial list of potential slots.
+	// Create a new slice to hold only the slots that are actually available.
 	var availableSlots []TimeSlot
 	for _, slot := range slots {
+		// Create a key for the current potential slot.
 		key := fmt.Sprintf("%s-%s", slot.Date, slot.Time)
+		// Check if this key exists in our `bookedSlots` map.
 		if !bookedSlots[key] {
+			// If the key is NOT in the map, the slot is available. Add it to our list.
 			availableSlots = append(availableSlots, slot)
 		}
 	}
 
+	// Finally, return the list of slots that were not found in the booked map.
 	return availableSlots, nil
 }
 
