@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"gothstack/app"
+	"gothstack/plugins/reservations"
 	"gothstack/public"
 	"log"
 	"net/http"
 	"os"
-	// "gothstack/plugins/reservations"
 
 	"github.com/anthdm/superkit/kit"
 	"github.com/go-chi/chi/v5"
@@ -15,6 +15,7 @@ import (
 )
 
 func main() {
+	reservations.SetupMailer()
 	kit.Setup()
 	router := chi.NewMux()
 

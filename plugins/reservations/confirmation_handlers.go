@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -177,8 +176,7 @@ func HandleBookingConfirmationPost(kit *kit.Kit) error {
 		return kit.Redirect(http.StatusSeeOther, fmt.Sprintf("/book/%d/service/%d/confirm?date=%s&time=%s", userID, serviceID, date, timeStr))
 	}
 	booking, _ := GetBookingByRef(bookingRef)
-	email := os.Getenv("SENDGRID_EMAIL")
-	err = sendBookingConfirmationEmail(booking, booking.TimeSlot, booking.Service, email)
+	err = sendBookingConfirmationEmail(booking, booking.TimeSlot, booking.Service)
 	if err != nil {
 		slog.Error("Failed to send email to client", "client", clientEmail)
 	}
@@ -186,7 +184,7 @@ func HandleBookingConfirmationPost(kit *kit.Kit) error {
 	if err != nil {
 		slog.Error("can't find user id")
 	}
-	err = sendOwnerBookingNotificationEmail(booking, booking.TimeSlot, booking.Service, user, email)
+	err = sendOwnerBookingNotificationEmail(booking, booking.TimeSlot, booking.Service, user)
 	if err != nil {
 		slog.Error("Failed to send email to owner", "owner", booking.Service.User.Email)
 	}

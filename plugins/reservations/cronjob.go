@@ -3,7 +3,6 @@ package reservations
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -23,7 +22,7 @@ func SetupCron() {
 			slog.Error("error fetching booking in cron", "err", err)
 				continue
 			}
-			err = sendReminderEmail(booking,slot,booking.Service,os.Getenv("SENDGRID_EMAIL"))
+			err = sendReminderEmail(booking,slot,booking.Service)
 			if err != nil {
 				slog.Error("error sending reminder cron", "err", err)
 				continue

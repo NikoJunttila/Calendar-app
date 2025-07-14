@@ -3,11 +3,6 @@ package reservations
 import (
 	"fmt"
 	"gothstack/plugins/auth"
-	"log/slog"
-	"os"
-
-	"github.com/sendgrid/sendgrid-go"
-	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
 func generateBookingConfirmationEmail(booking Booking, timeSlot TimeSlot, service Service) (string, string) {
@@ -158,28 +153,6 @@ Hyvinvointikeskus Luxus
 	return plainTextContent, htmlContent
 }
 
-func sendBookingConfirmationEmail(booking Booking, timeSlot TimeSlot, service Service, email string) error {
-	from := mail.NewEmail("Hyvinvointikeskusluxus", email)
-	subject := fmt.Sprintf("Ajanvaraus vahvistus - %s", service.Name)
-	to := mail.NewEmail(booking.ClientName, booking.ClientEmail)
-
-	plainTextContent, htmlContent := generateBookingConfirmationEmail(booking, timeSlot, service)
-	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
-	client := sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))
-
-	response, err := client.Send(message)
-	fmt.Println(response)
-	if err != nil {
-		slog.Error("Failed to send confirmation email", "booking_ref", booking.BookingRef, "err", err)
-		return err
-	}
-
-	slog.Info("Confirmation email sent successfully",
-		"booking_ref", booking.BookingRef,
-		"status_code", response.StatusCode)
-
-	return nil
-}
 func generateOwnerBookingNotificationEmail(booking Booking, timeSlot TimeSlot, service Service, owner auth.User) (string, string) {
 	// Generate plain text version
 	plainTextContent := fmt.Sprintf(`
@@ -376,32 +349,6 @@ Email: %s
 	return plainTextContent, htmlContent
 }
 
-// Function to send notification email to service owner
-func sendOwnerBookingNotificationEmail(booking Booking, timeSlot TimeSlot, service Service, owner auth.User, email string) error {
-	from := mail.NewEmail("Booking System", email)
-	subject := fmt.Sprintf("New Booking Alert - %s", service.Name)
-	to := mail.NewEmail(owner.FirstName, owner.Email)
-
-	plainTextContent, htmlContent := generateOwnerBookingNotificationEmail(booking, timeSlot, service, owner)
-
-	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
-	client := sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))
-
-	response, err := client.Send(message)
-	fmt.Println(response)
-	if err != nil {
-		slog.Error("Failed to send owner notification email", "booking_ref", booking.BookingRef, "err", err)
-		return err
-	}
-
-	slog.Info("Owner notification email sent successfully",
-		"booking_ref", booking.BookingRef,
-		"owner_email", owner.Email,
-		"status_code", response.StatusCode)
-
-	return nil
-}
-
 func generateReminderEmail(booking Booking, timeSlot TimeSlot, service Service) (string, string) {
 	// Luo tekstiversio
 	plainTextContent := fmt.Sprintf(`
@@ -548,28 +495,4 @@ Tiimimme
 		booking.BookingRef)
 
 	return plainTextContent, htmlContent
-}
-
-// sendReminderEmail sends a reminder email for an upcoming booking
-func sendReminderEmail(booking Booking, timeSlot TimeSlot, service Service, email string) error {
-	from := mail.NewEmail("Hyvinvointikeskusluxus", email)
-	subject := fmt.Sprintf("Reminder: Your Appointment Tomorrow - %s", service.Name)
-	to := mail.NewEmail(booking.ClientName, booking.ClientEmail)
-
-	plainTextContent, htmlContent := generateReminderEmail(booking, timeSlot, service)
-	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
-	client := sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))
-
-	response, err := client.Send(message)
-	fmt.Println(response)
-	if err != nil {
-		slog.Error("Failed to send reminder email", "booking_ref", booking.BookingRef, "err", err)
-		return err
-	}
-
-	slog.Info("Reminder email sent successfully",
-		"booking_ref", booking.BookingRef,
-		"status_code", response.StatusCode)
-
-	return nil
 }
