@@ -1,4 +1,5 @@
 # Build stage
+# worst dockerfile i've ever written
 FROM docker.io/golang:1.24-alpine AS builder
 
 # Install required dependencies
@@ -43,6 +44,9 @@ WORKDIR /app
 
 # Create directory for SQLite database
 RUN mkdir -p /app/data
+
+# Create empty .env file to prevent crash
+RUN touch .env
 
 # Copy the binary from builder
 COPY --from=builder /app/bin/app_prod .
