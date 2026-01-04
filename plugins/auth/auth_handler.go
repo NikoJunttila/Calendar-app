@@ -1,12 +1,14 @@
 package auth
 
 import (
-	"gothstack/app/db"
 	"database/sql"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
+
+	"gothstack/app/db"
 
 	"github.com/anthdm/superkit/kit"
 	v "github.com/anthdm/superkit/validate"
@@ -55,7 +57,7 @@ func HandleLoginCreate(kit *kit.Kit) error {
 		return kit.Render(LoginForm(values, errors))
 	}
 
-	skipVerify := kit.Getenv("SUPERKIT_AUTH_SKIP_VERIFY", "false")
+	skipVerify := strings.ToLower(kit.Getenv("SUPERKIT_AUTH_SKIP_VERIFY", "true"))
 	if skipVerify != "true" {
 		if !user.EmailVerifiedAt.Valid {
 			errors.Add("verified", "please verify your email")
