@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"gothstack/app"
-	"gothstack/plugins/reservations"
-	"gothstack/public"
 	"log"
 	"net/http"
 	"os"
+
+	"gothstack/app"
+	"gothstack/plugins/reservations"
+	"gothstack/public"
 
 	"github.com/anthdm/superkit/kit"
 	"github.com/go-chi/chi/v5"
@@ -29,7 +30,7 @@ func main() {
 
 	app.InitializeRoutes(router)
 	app.RegisterEvents()
-	
+
 	kit.UseErrorHandler(app.ErrorHandler)
 	router.HandleFunc("/*", kit.Handler(app.NotFoundHandler))
 
@@ -63,7 +64,7 @@ func disableCache(next http.Handler) http.Handler {
 func init() {
 	// Load .env file
 	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file:", err)
+		log.Println("Error loading .env file:", err)
 	}
 	log.Println("SUPERKIT_ENV:", os.Getenv("SUPERKIT_ENV"))
 	log.Println("DB_NAME:", os.Getenv("DB_NAME"))

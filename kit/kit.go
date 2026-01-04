@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -27,11 +26,9 @@ type Auth interface {
 	HasRole(role string) bool
 }
 
-var (
-	errorHandler = func(kit *Kit, err error) {
-		kit.Text(http.StatusInternalServerError, err.Error())
-	}
-)
+var errorHandler = func(kit *Kit, err error) {
+	kit.Text(http.StatusInternalServerError, err.Error())
+}
 
 type DefaultAuth struct{}
 
@@ -188,9 +185,7 @@ func Env() string {
 // already initialized. Calling NewCookieStore() from outside of
 // a function scope won't work.
 func Setup() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal(err)
-	}
+	godotenv.Load()
 	fmt.Println("setup running", os.Getenv("SENDGRID_EMAIL"))
 	appSecret := os.Getenv("SUPERKIT_SECRET")
 	if len(appSecret) < 32 {
