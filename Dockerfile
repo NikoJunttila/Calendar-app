@@ -58,9 +58,6 @@ COPY --from=builder /app/app/db/migrations ./migrations
 
 COPY --from=builder /app/app/translations/locales /app/translations/locales
 
-# Copy .env file if it exists
-COPY --from=builder /app/.env* ./
-
 # Expose the port the app runs on
 ENV HTTP_LISTEN_ADDR=:7331
 EXPOSE 7331
