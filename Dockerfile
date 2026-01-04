@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM docker.io/golang:1.24-alpine AS builder
 
 # Install required dependencies
 RUN apk add --no-cache git make npm build-base
@@ -33,7 +33,7 @@ RUN npm rebuild esbuild
 RUN make build
 
 # Final stage
-FROM alpine:3.21
+FROM docker.io/alpine:latest
 
 # Install SQLite and other runtime dependencies
 RUN apk add --no-cache ca-certificates tzdata sqlite
