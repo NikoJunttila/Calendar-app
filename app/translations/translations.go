@@ -2,13 +2,16 @@ package translations
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 )
+
+//go:embed locales/*.json
+var localesFS embed.FS
 
 // Define a custom type for the context key to avoid collisions
 type ContextKey struct{} // Make it exported by capitalizing
@@ -37,32 +40,30 @@ func Init() {
 	}
 }
 
-// NewManager creates a new language manager by loading translations from JSON files
+// NewManager creates a new language manager by loading translations from embedded JSON files
 func NewManager() *Manager {
 	m := &Manager{
 		defaultLang: "fi",
 		languages:   make(map[string]Language),
 	}
-	localesDir := os.Getenv("LOCALE_DIR")
 
-	files, err := os.ReadDir(localesDir)
+	// Read from embedded FS
+	entries, err := localesFS.ReadDir("locales")
 	if err != nil {
-		log.Printf("Error reading locales directory '%s': %v. No translations loaded.", localesDir, err)
-		// Decide if you want to panic or continue with no translations
-		// For now, we'll continue, relying on the default language potentially (if it loads)
-		// or returning keys if GetText fails later.
-		return m // Return the partially initialized manager
+		log.Printf("Error reading embedded locales directory: %v. No translations loaded.", err)
+		return m
 	}
 
-	for _, file := range files {
-		if file.IsDir() || !strings.HasSuffix(file.Name(), ".json") {
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue // Skip directories and non-JSON files
 		}
 
-		langCode := strings.TrimSuffix(file.Name(), ".json")
-		filePath := filepath.Join(localesDir, file.Name())
+		langCode := strings.TrimSuffix(entry.Name(), ".json")
+		filePath := filepath.Join("locales", entry.Name())
 
-		fileBytes, err := os.ReadFile(filePath)
+		// Read file from embedded FS
+		fileBytes, err := localesFS.ReadFile(filePath)
 		if err != nil {
 			log.Printf("Error reading translation file '%s': %v", filePath, err)
 			continue // Skip this language
@@ -93,7 +94,7 @@ func NewManager() *Manager {
 
 	// Check if the default language was loaded successfully
 	if _, exists := m.languages[m.defaultLang]; !exists {
-		log.Printf("Warning: Default language '%s' not found in '%s'. Fallback might not work correctly.", m.defaultLang, localesDir)
+		log.Printf("Warning: Default language '%s' not found.", m.defaultLang)
 		// Add a minimal default language entry if it's missing, to prevent panics in GetText
 		if len(m.languages) == 0 { // Only if NO languages were loaded at all
 			log.Println("Warning: No languages loaded. Adding minimal English fallback.")
@@ -102,8 +103,6 @@ func NewManager() *Manager {
 				Name:  "English (Default)",
 				Texts: map[string]string{"welcome": "Welcome"}, // Add at least one key
 			}
-		} else {
-			log.Printf("Warning: Default language '%s' not found. Check '%s.json'.", m.defaultLang, m.defaultLang)
 		}
 	}
 

@@ -1,5 +1,4 @@
 # Build stage
-# worst dockerfile i've ever written
 FROM docker.io/golang:1.24-alpine AS builder
 
 # Install required dependencies
@@ -7,12 +6,6 @@ RUN apk add --no-cache git make npm build-base
 
 # Set working directory
 WORKDIR /app
-
-# Install templ
-RUN go install github.com/a-h/templ/cmd/templ@latest
-
-# Install Goose
-RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 
 # Copy go.mod and go.sum files
 COPY go.mod go.sum ./
@@ -23,9 +16,6 @@ COPY . .
 
 # Install npm dependencies
 RUN npm install
-
-# Generate templ files
-RUN templ generate
 
 # Fix ELF image error
 RUN npm rebuild esbuild
@@ -51,27 +41,17 @@ RUN touch .env
 # Copy the binary from builder
 COPY --from=builder /app/bin/app_prod .
 
-# Copy the goose binary from the builder stage
-COPY --from=builder /go/bin/goose /usr/local/bin/
-
 # Copy the public directory for static assets
 COPY --from=builder /app/public ./public
-
-# Copy migrations directory from the correct path
-COPY --from=builder /app/app/db/migrations ./migrations
-
-COPY --from=builder /app/app/translations/locales /app/translations/locales
 
 # Expose the port the app runs on
 ENV HTTP_LISTEN_ADDR=:7331
 EXPOSE 7331
 
 # Set environment variables for Goose migrations
-ENV DB_DRIVER=sqlite3
-ENV DB_NAME=/app/data/app.db
-ENV MIGRATION_DIR=migrations
-ENV LOCALE_DIR=/app/translations/locales
-# Before final CMD
+# ENV DB_DRIVER=sqlite3
+# ENV DB_NAME=/app/data/app.db
+# ENV MIGRATION_DIR=migrations
 RUN ls -la /app/public/assets/
 # Run migrations and start the application
-CMD ["sh", "-c", "goose -dir=\"$MIGRATION_DIR\" \"$DB_DRIVER\" \"$DB_NAME\" up && ./app_prod"]
+CMD ["./app_prod"]
