@@ -1,5 +1,4 @@
 bin
-*_templ.go
 *.db
 exefile
 *_templ.txt
