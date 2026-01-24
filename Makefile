@@ -68,3 +68,6 @@ build:
 
 db-seed:
 	@go run cmd/scripts/seed/main.go
+
+db-migrate-data:
+	@go run cmd/scripts/migrate_data/main.go
