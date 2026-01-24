@@ -170,11 +170,13 @@ func Getenv(name string, def string) string {
 }
 
 func IsDevelopment() bool {
-	return os.Getenv("SUPERKIT_ENV") == "development"
+	env := os.Getenv("SUPERKIT_ENV")
+	return env == "development" || env == "dev"
 }
 
 func IsProduction() bool {
-	return os.Getenv("SUPERKIT_ENV") == "production"
+	env := os.Getenv("SUPERKIT_ENV")
+	return env == "production" || env == "prod"
 }
 
 func Env() string {

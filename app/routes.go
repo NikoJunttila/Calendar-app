@@ -10,9 +10,11 @@ import (
 	"gothstack/plugins/helloworld"
 	"gothstack/plugins/reservations"
 	"log/slog"
+	"net/http"
 
 	"github.com/anthdm/superkit/kit"
 	"github.com/anthdm/superkit/kit/middleware"
+
 	"github.com/go-chi/chi/v5"
 
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -77,6 +79,7 @@ func InitializeRoutes(router *chi.Mux) {
 // NotFoundHandler that will be called when the requested path could
 // not be found.
 func NotFoundHandler(kit *kit.Kit) error {
+	kit.Response.WriteHeader(http.StatusNotFound)
 	return kit.Render(errors.Error404())
 }
 

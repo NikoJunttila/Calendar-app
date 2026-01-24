@@ -11,6 +11,7 @@ import (
 	"gothstack/public"
 
 	"github.com/anthdm/superkit/kit"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
 )
@@ -19,20 +20,22 @@ func main() {
 	reservations.SetupMailer()
 	kit.Setup()
 	router := chi.NewMux()
-
 	app.InitializeMiddleware(router)
 
-	if kit.IsDevelopment() {
-		router.Handle("/public/*", disableCache(staticDev()))
-	} else if kit.IsProduction() {
-		router.Handle("/public/*", staticProd())
+	isDev := kit.IsDevelopment() || os.Getenv("SUPERKIT_ENV") == "dev"
+	isProd := kit.IsProduction() || os.Getenv("SUPERKIT_ENV") == "prod"
+
+	if isDev {
+		router.Handle("/public/*", disableCache(http.StripPrefix("/public/", http.FileServer(http.Dir("public")))))
+	} else if isProd {
+		router.Handle("/public/*", http.StripPrefix("/public/", http.FileServerFS(public.AssetsFS)))
 	}
 
 	app.InitializeRoutes(router)
 	app.RegisterEvents()
 
 	kit.UseErrorHandler(app.ErrorHandler)
-	router.HandleFunc("/*", kit.Handler(app.NotFoundHandler))
+	router.NotFound(kit.Handler(app.NotFoundHandler))
 
 	listenAddr := os.Getenv("HTTP_LISTEN_ADDR")
 	// In development link the full Templ proxy url.
@@ -44,14 +47,6 @@ func main() {
 	fmt.Printf("application running in %s at %s\n", kit.Env(), url)
 
 	http.ListenAndServe(listenAddr, router)
-}
-
-func staticDev() http.Handler {
-	return http.StripPrefix("/public/", http.FileServerFS(os.DirFS("public")))
-}
-
-func staticProd() http.Handler {
-	return http.StripPrefix("/public/", http.FileServerFS(public.AssetsFS))
 }
 
 func disableCache(next http.Handler) http.Handler {
