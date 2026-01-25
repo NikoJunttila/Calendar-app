@@ -1,6 +1,9 @@
 package app
 
 import (
+	"log/slog"
+	"net/http"
+
 	"gothstack/app/handlers"
 	"gothstack/app/translations"
 	"gothstack/app/views/errors"
@@ -9,8 +12,6 @@ import (
 	"gothstack/plugins/calendar"
 	"gothstack/plugins/helloworld"
 	"gothstack/plugins/reservations"
-	"log/slog"
-	"net/http"
 
 	"github.com/anthdm/superkit/kit"
 	"github.com/anthdm/superkit/kit/middleware"
@@ -48,6 +49,10 @@ func InitializeRoutes(router *chi.Mux) {
 		AuthFunc:    auth.AuthenticateUser,
 		RedirectURL: "/login",
 	}
+	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
 	auth.InitializeRoutes(router, authConfig)
 	helloworld.InitRoutes(router, authConfig)
 	calendar.InitRoutes(router, authConfig)
@@ -58,7 +63,7 @@ func InitializeRoutes(router *chi.Mux) {
 		app.Use(kit.WithAuthentication(authConfig, false)) // strict set to false
 		app.Get("/unauthorized", kit.Handler(handlers.HandleUnauthorized))
 		// Routes
-		//app.Get("/", kit.Handler(handlers.HandleLandingIndex))
+		// app.Get("/", kit.Handler(handlers.HandleLandingIndex))
 		app.Get("/test", kit.Handler(handlers.HandleTestIndex))
 		app.Post("/test-action", kit.Handler(handlers.HandleTestAction))
 	})
