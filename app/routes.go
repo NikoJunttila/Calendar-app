@@ -31,7 +31,7 @@ func InitializeMiddleware(router *chi.Mux) {
 	// Initialize the translations manager *before* using its middleware
 	translations.Init()
 
-	router.Use(chimiddleware.Logger)
+	router.Use(StructuredLogger)
 	router.Use(chimiddleware.Recoverer)
 	router.Use(middleware.WithRequest)
 	// Now translations.M is guaranteed to be non-nil
