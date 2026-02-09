@@ -21,9 +21,7 @@ templ BaseLayout() {
 			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 			<!-- HTMX -->
 			<script src="https://unpkg.com/htmx.org@1.9.9" defer></script>
-			<script>
-				var dID = "324ec5c5-dc78-4dd4-85d4-363573fe7eb8";
-			</script>
+			@templ.Raw(`<script>var dID = "324ec5c5-dc78-4dd4-85d4-363573fe7eb8";</script>`)
 			<script defer src="https://cdn.jsdelivr.net/gh/NikoJunttila/userAnalytics@main/javascript/centria.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 		</head>
 		<body hx-boost="true" x-data="{theme: 'light'}" :class="theme">

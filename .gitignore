@@ -8,3 +8,4 @@ tmp
 app_db
 uploads
 app/data
+*.db
